@@ -102,3 +102,9 @@
 .install-text strong { font-size: 0.92rem; }
 .install-text .small { color: var(--muted); font-size: 0.78rem; }
 .install-x { min-width: 36px; height: 36px; }
+
+/* 음성인식 진행 표시 */
+.mic-live { display: flex; align-items: center; gap: 8px; color: var(--accent-deep); font-size: 0.92rem; min-height: 24px; }
+.mic-dot { width: 10px; height: 10px; border-radius: 50%; background: var(--accent); flex: none; animation: micpulse 1s ease-in-out infinite; }
+@keyframes micpulse { 0%, 100% { transform: scale(0.7); opacity: 0.5; } 50% { transform: scale(1.2); opacity: 1; } }
+@media (prefers-reduced-motion: reduce) { .mic-dot { animation: none; } }

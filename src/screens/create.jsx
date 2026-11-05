@@ -48,6 +48,7 @@ export function Create({ draftId, onDone }) {
   const [mode, setMode] = useState('write');
   const [listening, setListening] = useState(false);
   const [micNote, setMicNote] = useState(null);
+  const [interim, setInterim] = useState('');
   const [forceFail, setForceFail] = useState(false);
   const [gen, setGen] = useState(null);
   const [checks, setChecks] = useState({ rights: false, privacy: false });
@@ -85,12 +86,89 @@ export function Create({ draftId, onDone }) {
   const voiceLabel = d.voice === 'own' ? t('내 목소리(2단계)') : t('AI 음성 · {name}', { name: t(PRESET[d.aiVoiceName]?.name ?? '') });
   const recRef = useRef(null);
 
+  // 음성인식: 아이폰(iOS)은 continuous 모드가 자주 멈추므로 짧은 세션을 자동으로 이어 붙이고,
+  // 응답이 없으면 감시 타이머가 끊어 준다. 말하는 중에는 임시 글자를 바로 보여 준다.
+  const wantRef = useRef(false);
+  const baseRef = useRef('');
+  const finalRef = useRef('');
+  const watchRef = useRef(0);
+  const stopMic = () => {
+    wantRef.current = false;
+    window.clearTimeout(watchRef.current);
+    try {
+      recRef.current?.stop();
+    } catch {}
+    recRef.current = null;
+    setListening(false);
+    setInterim('');
+  };
+  const startSession = () => {
+    const SR = window.SpeechRecognition ?? window.webkitSpeechRecognition;
+    const r = new SR();
+    r.lang = LOCALE[state.prefs.lang] ?? 'ko-KR';
+    r.interimResults = true;
+    r.continuous = false;
+    r.maxAlternatives = 1;
+    let gotAny = false;
+    const arm = (ms) => {
+      window.clearTimeout(watchRef.current);
+      watchRef.current = window.setTimeout(() => {
+        // 응답 없음: 세션을 끊고 (듣는 중이면) 새로 시작
+        try {
+          r.abort();
+        } catch {}
+        if (wantRef.current) {
+          if (!gotAny) {
+            wantRef.current = false;
+            setListening(false);
+            setInterim('');
+            setMicNote(t('마이크 응답이 없어요. 앱을 완전히 닫았다가 다시 열거나, 사파리에서 열어 다시 시도해 주세요.'));
+          } else startSession();
+        }
+      }, ms);
+    };
+    r.onstart = () => arm(8000);
+    r.onaudiostart = () => {
+      gotAny = true;
+      arm(15000);
+    };
+    r.onresult = (e) => {
+      gotAny = true;
+      arm(15000);
+      let fin = '';
+      let tmp = '';
+      for (let i = 0; i < e.results.length; i++) {
+        const tr = e.results[i][0].transcript;
+        if (e.results[i].isFinal) fin += tr + ' ';
+        else tmp += tr;
+      }
+      if (fin) {
+        finalRef.current = (finalRef.current + ' ' + fin).trim();
+        patch({ rawText: (baseRef.current + ' ' + finalRef.current).trim(), cleanedText: undefined, approvedScript: undefined });
+      }
+      setInterim(tmp);
+    };
+    r.onerror = (e) => {
+      window.clearTimeout(watchRef.current);
+      const code = e?.error;
+      if (code === 'no-speech' || code === 'aborted') return; // onend에서 이어감
+      wantRef.current = false;
+      setListening(false);
+      setInterim('');
+      setMicNote(code === 'not-allowed' || code === 'service-not-allowed' ? t('마이크 권한이 꺼져 있어요. 설정 → 앱 → 마이크 허용 후 다시 시도해 주세요.') : t('마이크를 쓸 수 없어요. 앱 미리보기 환경에서는 마이크가 막혀 있을 수 있어요. 일반 브라우저 탭이나 설치형 앱에서 다시 시도해 주세요.'));
+    };
+    r.onend = () => {
+      window.clearTimeout(watchRef.current);
+      setInterim('');
+      if (wantRef.current) window.setTimeout(() => wantRef.current && startSession(), 150);
+      else setListening(false);
+    };
+    recRef.current = r;
+    r.start();
+  };
   const toggleMic = () => {
     if (listening) {
-      try {
-        recRef.current?.stop();
-      } catch {}
-      setListening(false);
+      stopMic();
       return;
     }
     const SR = window.SpeechRecognition ?? window.webkitSpeechRecognition;
@@ -99,28 +177,32 @@ export function Create({ draftId, onDone }) {
       return;
     }
     try {
-      const r = new SR();
-      r.lang = LOCALE[state.prefs.lang] ?? 'ko-KR';
-      r.interimResults = false;
-      r.continuous = true;
-      r.onresult = (e) => {
-        let s = '';
-        for (let i = e.resultIndex; i < e.results.length; i++) s += e.results[i][0].transcript + ' ';
-        patch({ rawText: (d.rawText + ' ' + s).trim() });
-      };
-      r.onerror = () => {
-        setListening(false);
-        setMicNote(t('마이크를 쓸 수 없어요. 앱 미리보기 환경에서는 마이크가 막혀 있을 수 있어요. 일반 브라우저 탭이나 설치형 앱에서 다시 시도해 주세요.'));
-      };
-      r.onend = () => setListening(false);
-      recRef.current = r;
-      r.start();
-      setListening(true);
+      baseRef.current = d.rawText.trim();
+      finalRef.current = '';
+      wantRef.current = true;
       setMicNote(null);
+      setListening(true);
+      startSession();
     } catch {
+      wantRef.current = false;
+      setListening(false);
       setMicNote(t('마이크를 시작하지 못했어요. 글로 적어 주세요.'));
     }
   };
+  useEffect(() => {
+    const onHide = () => {
+      if (document.visibilityState === 'hidden' && wantRef.current) stopMic();
+    };
+    document.addEventListener('visibilitychange', onHide);
+    return () => {
+      document.removeEventListener('visibilitychange', onHide);
+      wantRef.current = false;
+      window.clearTimeout(watchRef.current);
+      try {
+        recRef.current?.abort();
+      } catch {}
+    };
+  }, []); // eslint-disable-line
 
   const previewLines = () => {
     const lines = sentences.slice(0, 2);
@@ -278,6 +360,11 @@ export function Create({ draftId, onDone }) {
               <Button icon="mic" variant={listening ? 'primary' : 'secondary'} size="lg" block onClick={toggleMic} aria-pressed={listening}>
                 {listening ? t('듣는 중… (누르면 중지)') : t('녹음 시작 (음성인식)')}
               </Button>
+              {listening && (
+                <p className="mic-live" aria-live="polite">
+                  <span className="mic-dot" aria-hidden="true" /> {interim || t('말씀하세요… 들리는 대로 아래에 적혀요')}
+                </p>
+              )}
               {micNote && <p className="note">{micNote}</p>}
               <p className="muted small">{t('녹음 파일을 그대로 올려 내 목소리로 게시하는 기능은 2단계에서 열려요. 지금은 말한 내용을 글로 바꾸는 방식이에요.')}</p>
             </>
@@ -295,6 +382,11 @@ export function Create({ draftId, onDone }) {
             <Button icon="mic" variant={listening ? 'primary' : 'ghost'} onClick={toggleMic} aria-pressed={listening}>
               {listening ? t('듣는 중… (누르면 중지)') : t('말로 덧붙이기')}
             </Button>
+          )}
+          {mode === 'write' && listening && (
+            <p className="mic-live" aria-live="polite">
+              <span className="mic-dot" aria-hidden="true" /> {interim || t('말씀하세요… 들리는 대로 아래에 적혀요')}
+            </p>
           )}
           {mode === 'write' && micNote && <p className="note">{micNote}</p>}
           <Button
