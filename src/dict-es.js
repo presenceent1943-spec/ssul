@@ -640,6 +640,7 @@ export const es = {
   '다시 정리': 'Reeditar',
   'AI 대본 정리 서버 주소': 'URL del editor de guiones IA',
   '비워 두면 기본 정리(문장 끊기·군더더기 제거)만 해요. Cloudflare Worker 주소를 넣으면 AI가 흐름과 의도를 읽어 대본으로 고쳐 써요. (worker/tidy-worker.js)': 'Vacío: solo orden básico. Con la URL del Cloudflare Worker, la IA reescribe el guion según hilo e intención. (worker/tidy-worker.js)',
+  '홈으로': 'Inicio',
   '홈': 'Inicio',
   '실화': 'Real',
   '각색': 'Adaptada',

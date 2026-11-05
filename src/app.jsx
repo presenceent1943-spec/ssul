@@ -238,9 +238,9 @@ export function App() {
     <AppCtx.Provider value={ctx}>
       <div className={cls}>
         <nav className="sidenav" aria-label={t('주 메뉴')}>
-          <div className="side-brand">
+          <button type="button" className="side-brand brand-btn" onClick={() => setTab('home')} aria-label={t('홈으로')}>
             <Logo size={40} wordmark />
-          </div>
+          </button>
           {TABS.filter((x) => x.id !== 'create').map((x) => (
             <button key={x.id} type="button" className={`side-item ${tab === x.id ? 'side-item-on' : ''}`} onClick={() => setTab(x.id)} aria-current={tab === x.id ? 'page' : undefined}>
               <Icon name={x.icon} size={22} />

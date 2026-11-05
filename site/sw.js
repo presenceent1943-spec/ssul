@@ -1,5 +1,5 @@
 // 썰 서비스 워커 — 앱 껍데기와 글꼴만 캐시. 새 배포가 올라오면 다음 실행 때 자동 교체됩니다.
-const VERSION = 'ssul-202611050937';
+const VERSION = 'ssul-202611050948';
 const SHELL = ['./', './index.html', './manifest.webmanifest', './fonts/jua.css', './icon-192.png', './icon-512.png', './apple-touch-icon.png'];
 self.addEventListener('install', (e) => {
   e.waitUntil(caches.open(VERSION).then((c) => c.addAll(SHELL)).then(() => self.skipWaiting()));

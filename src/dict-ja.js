@@ -640,6 +640,7 @@ export const ja = {
   '다시 정리': 'もう一度整理',
   'AI 대본 정리 서버 주소': 'AI台本整理サーバーのURL',
   '비워 두면 기본 정리(문장 끊기·군더더기 제거)만 해요. Cloudflare Worker 주소를 넣으면 AI가 흐름과 의도를 읽어 대본으로 고쳐 써요. (worker/tidy-worker.js)': '空なら基本整理（文の区切り・余分な言葉の削除）のみ。Cloudflare WorkerのURLを入れるとAIが流れと意図を読んで台本に書き直します。(worker/tidy-worker.js)',
+  '홈으로': 'ホームへ',
   '홈': 'ホーム',
   '실화': '実話',
   '각색': '脚色',

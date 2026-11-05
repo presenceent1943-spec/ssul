@@ -640,6 +640,7 @@ export const en = {
   '다시 정리': 'Re-edit',
   'AI 대본 정리 서버 주소': 'AI script editor URL',
   '비워 두면 기본 정리(문장 끊기·군더더기 제거)만 해요. Cloudflare Worker 주소를 넣으면 AI가 흐름과 의도를 읽어 대본으로 고쳐 써요. (worker/tidy-worker.js)': 'Leave empty for basic tidy-up only. Enter the Cloudflare Worker URL and the AI rewrites scripts following flow and intent. (worker/tidy-worker.js)',
+  '홈으로': 'Home',
   '홈': 'Home',
   '실화': 'True story',
   '각색': 'Adapted',

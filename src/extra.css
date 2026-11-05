@@ -108,3 +108,8 @@
 .mic-dot { width: 10px; height: 10px; border-radius: 50%; background: var(--accent); flex: none; animation: micpulse 1s ease-in-out infinite; }
 @keyframes micpulse { 0%, 100% { transform: scale(0.7); opacity: 0.5; } 50% { transform: scale(1.2); opacity: 1; } }
 @media (prefers-reduced-motion: reduce) { .mic-dot { animation: none; } }
+
+/* 로고 누르면 홈으로 */
+.brand-btn { background: 0 0; border: 0; padding: 4px 6px 4px 0; border-radius: 12px; cursor: pointer; display: inline-flex; align-items: center; }
+.brand-btn:hover { background: var(--surface-2); }
+.side-brand.brand-btn { padding: 6px 10px 14px; width: 100%; justify-content: flex-start; }

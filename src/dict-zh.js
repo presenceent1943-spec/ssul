@@ -640,6 +640,7 @@ export const zh = {
   '다시 정리': '重新整理',
   'AI 대본 정리 서버 주소': 'AI 文稿整理服务器地址',
   '비워 두면 기본 정리(문장 끊기·군더더기 제거)만 해요. Cloudflare Worker 주소를 넣으면 AI가 흐름과 의도를 읽어 대본으로 고쳐 써요. (worker/tidy-worker.js)': '留空则只做基础整理（断句、去赘词）。填入 Cloudflare Worker 地址后，AI 会按脉络和意图改写文稿。(worker/tidy-worker.js)',
+  '홈으로': '回首页',
   '홈': '首页',
   '실화': '真实',
   '각색': '改编',

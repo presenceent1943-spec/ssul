@@ -57,9 +57,9 @@ export function Home() {
   return (
     <div className="screen">
       <header className="topbar">
-        <div className="brand">
+        <button type="button" className="brand brand-btn" onClick={() => setTab('home')} aria-label={t('홈으로')}>
           <Logo size={34} wordmark />
-        </div>
+        </button>
         <div className="topbar-actions">
           <ThemeQuickToggle />
           <button type="button" className="icon-btn icon-btn-labeled" onClick={() => setTab('discover')}>
