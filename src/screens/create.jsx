@@ -3,10 +3,11 @@ import { CAT, CATEGORIES } from '../data.js';
 import { useStore, useT } from '../store.jsx';
 import { useApp } from '../app-ctx.js';
 import { Badge, Button, Chip, Cover, Icon, SectionHead, Toggle } from '../ui.jsx';
-import { autoTitle, cleanScript, emptyStats, findPII, guessCategory, normTag, paidLengthOk, sentenceSec, splitSentences, subsOk, suggestTags, uid } from '../util.js';
+import { autoTitle, emptyStats, findPII, guessCategory, normTag, paidLengthOk, sentenceSec, splitSentences, subsOk, suggestTags, uid } from '../util.js';
 import { fmtDur, fmtKRW, LOCALE } from '../i18n.js';
 import { PRESET, VOICE_PRESETS, resolveVoice, speak, stopSpeech } from '../speech.js';
 import { CoverPicker } from './creator.jsx';
+import { localTidy, remoteTidy, SPICE } from '../tidy.js';
 
 const STEPS = ['쓰기', '대본', '목소리', '미리 듣기', '게시'];
 const STATUS = { draft: '초안', script_review: '대본 확인', queued: '생성 대기', generating: '생성 중', review: '검토 대기', published: '게시', failed: '실패' };
@@ -49,6 +50,8 @@ export function Create({ draftId, onDone }) {
   const [listening, setListening] = useState(false);
   const [micNote, setMicNote] = useState(null);
   const [interim, setInterim] = useState('');
+  const [tidying, setTidying] = useState(false);
+  const [tidyNote, setTidyNote] = useState(null);
   const [forceFail, setForceFail] = useState(false);
   const [gen, setGen] = useState(null);
   const [checks, setChecks] = useState({ rights: false, privacy: false });
@@ -85,6 +88,39 @@ export function Create({ draftId, onDone }) {
   const title = d.title?.trim() || autoTitle(script) || t('제목 없는 이야기');
   const voiceLabel = d.voice === 'own' ? t('내 목소리(2단계)') : t('AI 음성 · {name}', { name: t(PRESET[d.aiVoiceName]?.name ?? '') });
   const recRef = useRef(null);
+
+  // 대본 정리: AI 서버(운영 설정 tidyUrl)가 있으면 흐름·의도를 읽어 고쳐 쓰고, 없거나 실패하면 기본 정리
+  const runTidy = async (opts = {}) => {
+    const spice = opts.spice ?? d.spice ?? 'keep';
+    const adapt = opts.adapt ?? d.adapt ?? false;
+    const url = (ops.tidyUrl || '').trim();
+    setTidyNote(null);
+    if (!url) {
+      patch({ cleanedText: localTidy(d.rawText), approvedScript: undefined, tidyBy: 'local', spice, adapt, status: 'script_review' });
+      return;
+    }
+    setTidying(true);
+    try {
+      const r = await remoteTidy(url, { text: d.rawText, spice, adapt, lang: state.prefs.lang });
+      patch({
+        cleanedText: r.script,
+        approvedScript: undefined,
+        tidyBy: 'ai',
+        spice,
+        adapt,
+        status: 'script_review',
+        title: d.title?.trim() ? d.title : r.title || d.title,
+        intro: d.intro?.trim() ? d.intro : r.intro || d.intro,
+        category: d.category ?? r.category,
+        tags: d.tags.length ? d.tags : (r.tags || []).slice(0, ops.maxTags),
+      });
+    } catch (e) {
+      patch({ cleanedText: localTidy(d.rawText), approvedScript: undefined, tidyBy: 'local', spice, adapt, status: 'script_review' });
+      setTidyNote(t('AI 정리 서버에 연결하지 못해 기본 정리로 대신했어요. ({err})', { err: String(e?.message || e).slice(0, 60) }));
+    } finally {
+      setTidying(false);
+    }
+  };
 
   // 음성인식: 아이폰(iOS)은 continuous 모드가 자주 멈추므로 짧은 세션을 자동으로 이어 붙이고,
   // 응답이 없으면 감시 타이머가 끊어 준다. 말하는 중에는 임시 글자를 바로 보여 준다.
@@ -393,13 +429,14 @@ export function Create({ draftId, onDone }) {
             variant="primary"
             size="lg"
             block
-            disabled={d.rawText.trim().length < 10}
-            onClick={() => {
-              patch({ cleanedText: cleanScript(d.rawText), status: 'script_review' });
+            disabled={d.rawText.trim().length < 10 || tidying}
+            onClick={async () => {
+              if (listening) stopMic();
               next();
+              await runTidy();
             }}
           >
-            {t('대본 정리하기')}
+            {tidying ? t('정리하는 중…') : t('대본 정리하기')}
           </Button>
           <p className="muted small">{t('원문·녹음은 대본 정리와 음성 생성에만 쓰여요. AI 학습에 쓰려면 별도 동의를 받고, 초안·원본은 삭제 요청 시 지워요.')}</p>
         </section>
@@ -407,29 +444,63 @@ export function Create({ draftId, onDone }) {
 
       {step === 2 && (
         <section className="create-step">
-          <SectionHead title={t('대본 확인')} sub={t('문장과 호흡만 다듬었어요. 원문에 없는 사실·사건·대사는 추가하지 않아요.')} />
-          <Badge tone="accent">{t('데모 정리 — 2단계에서 LLM 대본 정리로 교체')}</Badge>
+          <SectionHead title={t('대본 확인')} sub={d.tidyBy === 'ai' ? t('말의 흐름과 의도를 읽어 듣기 좋게 고쳐 썼어요. 원문에 없는 사실·사건·대사는 넣지 않아요.') : t('문장을 끊고 군더더기만 걷어낸 기본 정리예요. AI 정리 서버를 연결하면 흐름까지 고쳐 써요.')} />
+          <div className="chip-row chip-wrap">
+            <Badge tone={d.tidyBy === 'ai' ? 'good' : 'neutral'}>{d.tidyBy === 'ai' ? t('AI 정리') : t('기본 정리')}</Badge>
+            {tidying && <Badge tone="accent">{t('정리하는 중…')}</Badge>}
+          </div>
+          {tidyNote && <p className="note">{tidyNote}</p>}
+          <p className="label">
+            {t('욕·거친 표현')} <span className="muted small">{t('다시 누르면 그 기준으로 다시 정리해요')}</span>
+          </p>
+          <div className="radio-list">
+            {SPICE.map((sp) => (
+              <label key={sp.id} className={`radio ${(d.spice ?? 'keep') === sp.id ? 'radio-on' : ''}`}>
+                <input
+                  type="radio"
+                  name="spice"
+                  checked={(d.spice ?? 'keep') === sp.id}
+                  disabled={tidying}
+                  onChange={() => runTidy({ spice: sp.id })}
+                />
+                <span>
+                  <strong>{t(sp.name)}</strong> <span className="small muted">— {t(sp.desc)}</span>
+                </span>
+              </label>
+            ))}
+          </div>
+          <Toggle id="adapt" label={t('창작적 각색 허용 (분위기 묘사·연결 문장 보태기)')} checked={!!d.adapt} onChange={(v) => runTidy({ adapt: v })} />
           <div className="compare">
             <div>
-              <p className="label">{t('원문')}</p>
-              <p className="script-text small">{d.rawText}</p>
-            </div>
-            <div>
               <p className="label">{t('정리안 (직접 고칠 수 있어요)')}</p>
-              <textarea id="cleaned-text" className="big-textarea" rows={8} value={d.approvedScript ?? d.cleanedText ?? ''} onChange={(e) => patch({ approvedScript: e.target.value })} />
+              <textarea id="cleaned-text" className="big-textarea" rows={12} value={tidying ? '' : d.approvedScript ?? d.cleanedText ?? ''} placeholder={tidying ? t('정리하는 중…') : ''} disabled={tidying} onChange={(e) => patch({ approvedScript: e.target.value })} />
             </div>
+            <details className="section">
+              <summary>
+                <span>{t('원문')}</span>
+                <span className="summary-val">{t('{n}자', { n: d.rawText.length })}</span>
+              </summary>
+              <div className="section-body">
+                <p className="script-text small">{d.rawText}</p>
+              </div>
+            </details>
           </div>
-          <Toggle id="adapt" label={t('창작적 각색 요청 (선택)')} checked={false} onChange={() => toast(t('각색은 작성자가 켰을 때만 해요. 데모에서는 적용되지 않아요(2단계).'))} />
           <p className="muted small">
             {t('자막 {n}문장', { n: sentences.length })} · {t('예상 길이 {dur}', { dur: fmtDur(sec, t) })}
           </p>
           <div className="btn-row">
-            <Button onClick={prev}>{t('이전')}</Button>
-            <Button variant="ghost" onClick={() => patch({ approvedScript: d.rawText })}>
+            <Button onClick={prev} disabled={tidying}>
+              {t('이전')}
+            </Button>
+            <Button variant="ghost" disabled={tidying} onClick={() => runTidy()}>
+              {t('다시 정리')}
+            </Button>
+            <Button variant="ghost" disabled={tidying} onClick={() => patch({ approvedScript: d.rawText })}>
               {t('원문 그대로 쓰기')}
             </Button>
             <Button
               variant="primary"
+              disabled={tidying || !(d.approvedScript ?? d.cleanedText)}
               onClick={() => {
                 patch({ approvedScript: d.approvedScript ?? d.cleanedText });
                 next();

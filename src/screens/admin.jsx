@@ -126,6 +126,11 @@ export function Admin() {
           {field('rankingShrinkM', t('순위 완청률 수축 m'))}
           {field('dailyGenerationLimit', t('하루 생성 한도'))}
           {field('maxRetries', t('실패 재시도 한도'))}
+          <label className="field">
+            <span>{t('AI 대본 정리 서버 주소')}</span>
+            <input id="ops-tidyUrl" type="url" value={ops.tidyUrl ?? ''} placeholder="https://ssul-tidy.xxxx.workers.dev" onChange={(e) => setOps({ tidyUrl: e.target.value.trim() })} />
+          </label>
+          <p className="small muted">{t('비워 두면 기본 정리(문장 끊기·군더더기 제거)만 해요. Cloudflare Worker 주소를 넣으면 AI가 흐름과 의도를 읽어 대본으로 고쳐 써요. (worker/tidy-worker.js)')}</p>
           <div className="card card-soft small">
             <strong>{t('순위 가중치(초기 제안)')}</strong>
             <p>

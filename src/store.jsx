@@ -14,6 +14,7 @@ export const DEFAULT_OPS = {
   rankingShrinkM: 20,
   dailyGenerationLimit: 5,
   maxRetries: 3,
+  tidyUrl: '',
 };
 
 export const DEFAULT_PREFS = {

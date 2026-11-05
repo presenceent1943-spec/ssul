@@ -27,6 +27,15 @@ npx cap open ios       # Xcode (Mac 전용)
 - 안드로이드: Android Studio → Build → Generate Signed Bundle (AAB) → Play Console 업로드
 - iOS: Xcode → Product → Archive → TestFlight
 
+## AI 대본 정리 서버 (Cloudflare Worker)
+`worker/tidy-worker.js` 를 Cloudflare Worker로 올리고, 앱의 **내 정보 → 관리자 화면 → 운영 설정 → AI 대본 정리 서버 주소**에 Worker 주소를 넣으면
+"대본 정리하기"가 말의 흐름·의도를 읽어 대본으로 고쳐 씁니다. 욕·거친 표현은 살려서 세게 / 순화 / 빼기 중 선택.
+1. https://dash.cloudflare.com → Workers & Pages → Create → Hello World → 이름 `ssul-tidy` → Deploy
+2. Edit code → 내용을 `worker/tidy-worker.js` 로 교체 → Deploy
+3. Settings → Variables and Secrets → `ANTHROPIC_API_KEY` (Secret, https://console.anthropic.com 에서 발급)
+4. Worker 주소(`https://ssul-tidy.xxxx.workers.dev`)를 앱 운영 설정에 입력 (기본값으로 넣으려면 `src/store.jsx` 의 `tidyUrl`)
+서버 주소가 비어 있으면 기본 정리(문장 끊기·군더더기 제거)만 합니다.
+
 ## 현재 단계 (1단계 시제품)
 - 모든 작품·창작자·수치는 시연용 샘플, 데이터는 기기(브라우저)에만 저장
 - 음성은 기기 내장 TTS, 결제는 데모 — 스토어 심사 전에 로그인·서버 음성·인앱결제 연결 필요(2~3단계)
