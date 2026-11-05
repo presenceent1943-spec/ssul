@@ -1,0 +1,8 @@
+{
+  "appId": "com.presenceent.ssul",
+  "appName": "썰",
+  "webDir": "site",
+  "server": { "androidScheme": "https" },
+  "android": { "backgroundColor": "#fff9f2" },
+  "ios": { "backgroundColor": "#fff9f2", "contentInset": "always" }
+}
