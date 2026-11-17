@@ -134,7 +134,11 @@ export function Avatar({ name, hue, size = 40, anon }) {
 
 // 배경 스타일: 프리셋 그라데이션 / 색상 / 사진
 export function coverStyle(cover, hue, dark) {
-  if (cover?.kind === 'image' && cover.dataUrl) return { backgroundImage: `url(${cover.dataUrl})`, backgroundSize: 'cover', backgroundPosition: 'center' };
+  if (cover?.kind === 'image' && (cover.dataUrl || cover.url)) {
+    // 이미지가 아직 안 받아졌을 때를 대비해 카테고리 색을 밑에 깐다
+    const fallback = dark ? `linear-gradient(145deg, var(--cover-dark), oklch(0.32 0.08 ${hue}))` : `linear-gradient(145deg, oklch(0.9 0.07 ${hue}), oklch(0.7 0.13 ${hue}))`;
+    return { backgroundImage: `url(${cover.dataUrl || cover.url}), ${fallback}`, backgroundSize: 'cover', backgroundPosition: 'center' };
+  }
   if (cover?.kind === 'preset') {
     const p = COVER_PRESETS.find((x) => x.id === cover.id);
     if (p) return { background: p.css };
