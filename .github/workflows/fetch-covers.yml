@@ -3,7 +3,7 @@
 name: Fetch cover images
 on:
   push:
-    paths: ['assets/cover-urls.txt', '.github/workflows/fetch-covers.yml']
+    paths: ['assets/cover-urls.txt', '.github/workflows/fetch-covers.yml', 'scripts/fetch_covers.py']
   workflow_dispatch:
 permissions:
   contents: write
@@ -12,16 +12,13 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
       - name: Download and convert
         run: |
-          set -e
-          mkdir -p site/covers tmp-covers
-          while read -r id url; do
-            [ -z "$id" ] && continue
-            echo "fetch $id"
-            curl -sSL --retry 3 -o "tmp-covers/$id.png" "$url"
-            convert "tmp-covers/$id.png" -resize 900x900 -strip -interlace Plane -quality 82 "site/covers/$id.jpg"
-          done < assets/cover-urls.txt
+          pip install --quiet pillow
+          python scripts/fetch_covers.py assets/cover-urls.txt site/covers
           ls -la site/covers
       - name: Commit
         run: |
