@@ -1,15 +1,15 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useStore } from './store.jsx';
 import { canAccess, idxAt, previewCutoff, timeline, totalSec } from './util.js';
-import { listVoices, onVoicesReady, resolveVoice, speak, stopSpeech } from './speech.js';
+import { listVoices, onVoicesReady, resolveVoice, speak, stopSpeech, DEFAULT_VOICE } from './speech.js';
 import { LOCALE } from './i18n.js';
 
 const TICK = 200;
 
 // 작품에 쓸 목소리: 듣는 사람이 '내 목소리'를 골랐으면 그걸, 아니면 작가가 고른 프리셋
 export function voiceFor(work, prefs) {
-  const choice = prefs.voiceMode === 'mine' ? prefs.myVoice : work?.aiVoiceName ?? 'haneul';
-  const r = resolveVoice(choice, work?.lang ?? 'ko');
+  const choice = prefs.voiceMode === 'mine' ? prefs.myVoice : work?.aiVoiceName ?? DEFAULT_VOICE;
+  const r = resolveVoice(choice, work?.lang ?? 'ko', { female: prefs.voiceFemale, male: prefs.voiceMale });
   return { ...r, pitch: r.pitch * (prefs.pitchAdj ?? 1) };
 }
 

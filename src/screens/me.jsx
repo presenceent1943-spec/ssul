@@ -3,7 +3,7 @@ import { displayName, subscriberCount, useStore, useT } from '../store.jsx';
 import { useApp } from '../app-ctx.js';
 import { Avatar, BackBar, Button, Chip, Empty, Icon, Row, SectionHead, Toggle, WorkGrid } from '../ui.jsx';
 import { LANGS } from '../i18n.js';
-import { VOICE_PRESETS, allVoices, onVoicesReady } from '../speech.js';
+import { VOICE_GROUPS, VOICE_PRESETS, allVoices, onVoicesReady, voiceGender } from '../speech.js';
 import { VoiceSample } from './create.jsx';
 import { coverStyle } from '../ui.jsx';
 import { profileCover } from './creator.jsx';
@@ -102,6 +102,9 @@ export function VoicePicker({ compact }) {
   const sample = t('안녕하세요. 오늘은 어떤 이야기를 들려 드릴까요?');
   const kor = voices.filter((v) => v.lang.toLowerCase().startsWith(lang));
   const list = kor.length ? kor : voices;
+  const genderName = (g) => (g === 'f' ? t('여성') : g === 'm' ? t('남성') : t('성별 미상'));
+  const hasMale = list.some((v) => voiceGender(v) === 'm');
+  const hasFemale = list.some((v) => voiceGender(v) === 'f');
   return (
     <div className="voice-picker">
       <div className="seg seg-wide" role="tablist" aria-label={t('목소리 기준')}>
@@ -112,48 +115,83 @@ export function VoicePicker({ compact }) {
           {t('내가 고른 목소리')}
         </button>
       </div>
+      {p.voiceMode === 'creator' && <p className="small muted">{t('작품마다 작가가 고른 목소리(20대 여성·50대 남성 등)로 들어요. 듣기 싫은 목소리가 있으면 ‘내가 고른 목소리’로 바꾸세요.')}</p>}
       {p.voiceMode === 'mine' && (
         <>
           <p className="small muted">{t('모든 이야기를 아래에서 고른 목소리로 들어요. 각각 들어보고 편한 걸로 고르세요.')}</p>
-          <div className="radio-list">
-            {VOICE_PRESETS.map((v) => (
-              <label key={v.id} className={`radio radio-voice ${p.myVoice === v.id ? 'radio-on' : ''}`}>
-                <input type="radio" name="myVoice" checked={p.myVoice === v.id} onChange={() => set({ myVoice: v.id })} />
-                <span>
-                  <strong>{t(v.name)}</strong> <span className="small muted">— {t(v.desc)}</span>
-                </span>
-                <VoiceSample text={sample} choice={v.id} lang={lang} />
-              </label>
-            ))}
-          </div>
-          {!compact && (
-            <>
-              <p className="label">
-                {t('이 기기에 설치된 음성')} <span className="muted small">{t('기기·브라우저마다 달라요. 더 자연스러운 음성이 있으면 직접 골라 보세요.')}</span>
-              </p>
-              {list.length === 0 ? (
-                <p className="muted small">{t('아직 음성 목록을 불러오지 못했어요. 잠시 후 다시 열어 보세요.')}</p>
-              ) : (
-                <div className="radio-list">
-                  {list.map((v) => {
-                    const id = `browser:${v.voiceURI}`;
-                    return (
-                      <label key={v.voiceURI} className={`radio radio-voice ${p.myVoice === id ? 'radio-on' : ''}`}>
-                        <input type="radio" name="myVoice" checked={p.myVoice === id} onChange={() => set({ myVoice: id })} />
-                        <span>
-                          <strong>{v.name}</strong> <span className="small muted">— {v.lang}{v.localService ? '' : ` · ${t('온라인')}`}</span>
-                        </span>
-                        <VoiceSample text={sample} choice={id} lang={lang} />
-                      </label>
-                    );
-                  })}
-                </div>
-              )}
-            </>
-          )}
+          {VOICE_GROUPS.map((g) => (
+            <div key={g.id} className="voice-group">
+              <p className="label">{t(g.name)}</p>
+              <div className="radio-list">
+                {VOICE_PRESETS.filter((v) => v.gender === g.id).map((v) => (
+                  <label key={v.id} className={`radio radio-voice ${p.myVoice === v.id ? 'radio-on' : ''}`}>
+                    <input type="radio" name="myVoice" checked={p.myVoice === v.id} onChange={() => set({ myVoice: v.id })} />
+                    <span>
+                      <strong>{t(v.name)}</strong> <span className="small muted">— {t(v.desc)}</span>
+                    </span>
+                    <VoiceSample text={sample} choice={v.id} lang={lang} />
+                  </label>
+                ))}
+              </div>
+            </div>
+          ))}
         </>
       )}
-      {p.voiceMode === 'creator' && <p className="small muted">{t('작품마다 작가가 고른 목소리(하늘·바다·숲 등)로 들어요. 듣기 싫은 목소리가 있으면 ‘내가 고른 목소리’로 바꾸세요.')}</p>}
+      {!compact && (
+        <details className="section">
+          <summary>
+            <span>{t('이 기기의 음성 배정')}</span>
+            <span className="summary-val">{t('{n}개', { n: list.length })}</span>
+          </summary>
+          <div className="section-body">
+            <p className="muted small">{t('연령·성별 목소리는 이 기기에 설치된 음성 중 성별이 맞는 것을 골라 속도·높낮이를 바꿔 만들어요. 자동 배정이 어색하면 여기서 직접 정하세요.')}</p>
+            {list.length === 0 ? (
+              <p className="muted small">{t('아직 음성 목록을 불러오지 못했어요. 잠시 후 다시 열어 보세요.')}</p>
+            ) : (
+              <>
+                {[
+                  { key: 'voiceFemale', label: t('여성 목소리에 쓸 음성'), has: hasFemale },
+                  { key: 'voiceMale', label: t('남성 목소리에 쓸 음성'), has: hasMale },
+                ].map((f) => (
+                  <label key={f.key} className="field">
+                    <span>
+                      {f.label} {!f.has && <span className="muted small">· {t('이 기기엔 해당 성별 음성이 없어 높낮이로 흉내 내요')}</span>}
+                    </span>
+                    <select value={p[f.key] ?? ''} onChange={(e) => set({ [f.key]: e.target.value })} aria-label={f.label}>
+                      <option value="">{t('자동')}</option>
+                      {list.map((v) => (
+                        <option key={v.voiceURI} value={v.voiceURI}>
+                          {v.name} · {genderName(voiceGender(v))}
+                          {v.localService ? '' : ` · ${t('온라인')}`}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+                ))}
+                {p.voiceMode === 'mine' && (
+                  <>
+                    <p className="label">{t('음성 하나를 그대로 쓰기')}</p>
+                    <div className="radio-list">
+                      {list.map((v) => {
+                        const id = `browser:${v.voiceURI}`;
+                        return (
+                          <label key={v.voiceURI} className={`radio radio-voice ${p.myVoice === id ? 'radio-on' : ''}`}>
+                            <input type="radio" name="myVoice" checked={p.myVoice === id} onChange={() => set({ myVoice: id })} />
+                            <span>
+                              <strong>{v.name}</strong> <span className="small muted">— {genderName(voiceGender(v))}{v.localService ? '' : ` · ${t('온라인')}`}</span>
+                            </span>
+                            <VoiceSample text={sample} choice={id} lang={lang} />
+                          </label>
+                        );
+                      })}
+                    </div>
+                  </>
+                )}
+              </>
+            )}
+          </div>
+        </details>
+      )}
       <label className="field">
         <span>
           {t('목소리 높낮이')} <span className="muted">· {t('낮게')} ← {Math.round((p.pitchAdj ?? 1) * 100)}% → {t('높게')}</span>

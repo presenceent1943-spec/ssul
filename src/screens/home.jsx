@@ -2,8 +2,9 @@ import { useMemo, useState } from 'react';
 import { BUNDLES, CATEGORIES } from '../data.js';
 import { useStore, useT } from '../store.jsx';
 import { useApp } from '../app-ctx.js';
-import { Button, Chip, Empty, Icon, Logo, SectionHead, ViewToggle, WorkGrid, WorkList } from '../ui.jsx';
+import { Button, Chip, Cover, Empty, Icon, Logo, SectionHead, ViewToggle, WorkGrid, WorkList } from '../ui.jsx';
 import { totalSec } from '../util.js';
+import { fmtDur } from '../i18n.js';
 
 export function ThemeQuickToggle() {
   const { state, dispatch } = useStore();
@@ -14,6 +15,34 @@ export function ThemeQuickToggle() {
       <Icon name={dark ? 'sun' : 'moon'} />
       <span>{dark ? t('밝게') : t('어둡게')}</span>
     </button>
+  );
+}
+
+// 30초 썰: 1분 안에 끝나는 이야기를 세로 타일로 한 줄에 — 누르면 숏츠 화면에서 그 작품부터
+function ShortsStrip({ works, cps }) {
+  const { push } = useApp();
+  const t = useT();
+  if (!works.length) return null;
+  return (
+    <section aria-label={t('30초 썰')}>
+      <SectionHead
+        title={t('30초 썰')}
+        sub={t('1분 안에 끝나는 이야기 · 위로 넘기며 들어요')}
+        action={
+          <Button size="sm" variant="ghost" icon="chevron-right" className="btn-more btn-more-arrow" onClick={() => push({ kind: 'shorts' })}>
+            {t('전체 보기')}
+          </Button>
+        }
+      />
+      <div className="shorts-strip">
+        {works.map((w) => (
+          <button key={w.id} type="button" className="shorts-tile" onClick={() => push({ kind: 'shorts', startId: w.id })} aria-label={t('{title} 듣기', { title: w.title })}>
+            <Cover category={w.category} hue={w.hue} cover={w.cover} size={108} h={144} radius={14} label={fmtDur(totalSec(w.sentences, cps), t)} />
+            <span className="shorts-tile-title">{w.title}</span>
+          </button>
+        ))}
+      </div>
+    </section>
   );
 }
 
@@ -52,6 +81,7 @@ export function Home() {
       }),
     [visible, state.positions, cps]
   );
+  const shorts = useMemo(() => visible.filter((w) => totalSec(w.sentences, cps) <= state.ops.shortMaxSec).sort((a, b) => b.stats.week.validListens - a.stats.week.validListens), [visible, cps, state.ops.shortMaxSec]);
   const List = view === 'grid' ? WorkGrid : WorkList;
 
   return (
@@ -99,6 +129,7 @@ export function Home() {
               </Chip>
             ))}
           </div>
+          {cat === 'all' && <ShortsStrip works={shorts} cps={cps} />}
           {cont.length > 0 && cat === 'all' && (
             <>
               <SectionHead title={t('이어 듣기')} sub={t('듣던 위치부터 다시 들을 수 있어요')} />
@@ -127,7 +158,15 @@ export function Home() {
               </div>
             </section>
           )}
-          <SectionHead title={cat === 'all' ? t('지금 들을 만한 이야기') : t(CATEGORIES.find((c) => c.id === cat)?.name ?? '')} sub={state.interests.length ? t('관심 장르와 새 창작자를 섞어 보여 드려요') : t('관심 장르를 고르면 더 정확해져요')} />
+          <SectionHead
+            title={cat === 'all' ? t('지금 들을 만한 이야기') : t(CATEGORIES.find((c) => c.id === cat)?.name ?? '')}
+            sub={state.interests.length ? t('관심 장르와 새 창작자를 섞어 보여 드려요') : t('관심 장르를 고르면 더 정확해져요')}
+            action={
+              <Button size="sm" variant="ghost" icon="star" className="btn-more" onClick={() => push({ kind: 'ranking' })}>
+                {t('인기순위')}
+              </Button>
+            }
+          />
           <List works={reco} queue />
         </>
       ) : state.subscriptions.length === 0 ? (

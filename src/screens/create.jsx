@@ -5,20 +5,21 @@ import { useApp } from '../app-ctx.js';
 import { Badge, Button, Chip, Cover, Icon, SectionHead, Toggle } from '../ui.jsx';
 import { autoTitle, emptyStats, findPII, guessCategory, normTag, paidLengthOk, sentenceSec, splitSentences, subsOk, suggestTags, uid } from '../util.js';
 import { fmtDur, fmtKRW, LOCALE } from '../i18n.js';
-import { PRESET, VOICE_PRESETS, resolveVoice, speak, stopSpeech } from '../speech.js';
+import { DEFAULT_VOICE, PRESET, VOICE_GROUPS, VOICE_PRESETS, resolveVoice, speak, stopSpeech } from '../speech.js';
 import { CoverPicker } from './creator.jsx';
-import { localTidy, remoteTidy, SPICE } from '../tidy.js';
+import { localTidy, remoteTidy, SPICE, STYLES } from '../tidy.js';
 
 const STEPS = ['쓰기', '대본', '목소리', '미리 듣기', '게시'];
 const STATUS = { draft: '초안', script_review: '대본 확인', queued: '생성 대기', generating: '생성 중', review: '검토 대기', published: '게시', failed: '실패' };
 
 function newDraft() {
-  return { id: uid('d'), rawText: '', tags: [], origin: 'true', voice: 'ai', aiVoiceName: 'haneul', paid: false, status: 'draft', retries: 0, updatedAt: new Date().toISOString() };
+  return { id: uid('d'), rawText: '', tags: [], origin: 'true', voice: 'ai', aiVoiceName: DEFAULT_VOICE, paid: false, status: 'draft', retries: 0, updatedAt: new Date().toISOString() };
 }
 
 export function VoiceSample({ text, choice, lang = 'ko', size = 'sm' }) {
   const t = useT();
   const { toast } = useApp();
+  const { state } = useStore();
   const [on, setOn] = useState(false);
   useEffect(() => () => on && stopSpeech(), [on]);
   const play = () => {
@@ -27,7 +28,7 @@ export function VoiceSample({ text, choice, lang = 'ko', size = 'sm' }) {
       setOn(false);
       return;
     }
-    const v = resolveVoice(choice, lang);
+    const v = resolveVoice(choice, lang, { female: state.prefs.voiceFemale, male: state.prefs.voiceMale });
     const ok = speak(text, { lang: LOCALE[lang] ?? 'ko-KR', rate: v.rate, pitch: v.pitch, volume: v.volume, voice: v.voice, onEnd: () => setOn(false), onError: () => setOn(false) });
     if (!ok) toast(t('이 기기에서는 음성 샘플을 재생할 수 없어요.'));
     else setOn(true);
@@ -91,21 +92,23 @@ export function Create({ draftId, onDone }) {
 
   // 대본 정리: AI 서버(운영 설정 tidyUrl)가 있으면 흐름·의도를 읽어 고쳐 쓰고, 없거나 실패하면 기본 정리
   const runTidy = async (opts = {}) => {
+    const style = opts.style ?? d.style ?? 'shorts';
     const spice = opts.spice ?? d.spice ?? 'keep';
-    const adapt = opts.adapt ?? d.adapt ?? false;
+    const adapt = opts.adapt ?? d.adapt ?? style !== 'plain';
     const url = (ops.tidyUrl || '').trim();
     setTidyNote(null);
     if (!url) {
-      patch({ cleanedText: localTidy(d.rawText), approvedScript: undefined, tidyBy: 'local', spice, adapt, status: 'script_review' });
+      patch({ cleanedText: localTidy(d.rawText), approvedScript: undefined, tidyBy: 'local', style, spice, adapt, status: 'script_review' });
       return;
     }
     setTidying(true);
     try {
-      const r = await remoteTidy(url, { text: d.rawText, spice, adapt, lang: state.prefs.lang });
+      const r = await remoteTidy(url, { text: d.rawText, style, spice, adapt, lang: state.prefs.lang });
       patch({
         cleanedText: r.script,
         approvedScript: undefined,
         tidyBy: 'ai',
+        style,
         spice,
         adapt,
         status: 'script_review',
@@ -115,8 +118,8 @@ export function Create({ draftId, onDone }) {
         tags: d.tags.length ? d.tags : (r.tags || []).slice(0, ops.maxTags),
       });
     } catch (e) {
-      patch({ cleanedText: localTidy(d.rawText), approvedScript: undefined, tidyBy: 'local', spice, adapt, status: 'script_review' });
-      setTidyNote(t('AI 정리 서버에 연결하지 못해 기본 정리로 대신했어요. ({err})', { err: String(e?.message || e).slice(0, 60) }));
+      patch({ cleanedText: localTidy(d.rawText), approvedScript: undefined, tidyBy: 'local', style, spice, adapt, status: 'script_review' });
+      setTidyNote(t('AI 대본 작가 서버에 연결하지 못해 기본 정리로 대신했어요. ({err})', { err: String(e?.message || e).slice(0, 60) }));
     } finally {
       setTidying(false);
     }
@@ -444,32 +447,53 @@ export function Create({ draftId, onDone }) {
 
       {step === 2 && (
         <section className="create-step">
-          <SectionHead title={t('대본 확인')} sub={d.tidyBy === 'ai' ? t('말의 흐름과 의도를 읽어 듣기 좋게 고쳐 썼어요. 원문에 없는 사실·사건·대사는 넣지 않아요.') : t('문장을 끊고 군더더기만 걷어낸 기본 정리예요. AI 정리 서버를 연결하면 흐름까지 고쳐 써요.')} />
+          <SectionHead title={t('대본 확인')} sub={d.tidyBy === 'ai' ? t('막 말한 이야기를 AI 작가가 흐름·의도를 읽어 숏츠 대본처럼 다시 썼어요. 인물·사건·결말은 원문 그대로예요.') : t('문장을 끊고 군더더기만 걷어낸 기본 정리예요.')} />
           <div className="chip-row chip-wrap">
-            <Badge tone={d.tidyBy === 'ai' ? 'good' : 'neutral'}>{d.tidyBy === 'ai' ? t('AI 정리') : t('기본 정리')}</Badge>
-            {tidying && <Badge tone="accent">{t('정리하는 중…')}</Badge>}
+            <Badge tone={d.tidyBy === 'ai' ? 'good' : 'neutral'}>{d.tidyBy === 'ai' ? t('AI 작가') : t('기본 정리')}</Badge>
+            {tidying && <Badge tone="accent">{t('다시 쓰는 중…')}</Badge>}
           </div>
           {tidyNote && <p className="note">{tidyNote}</p>}
+          {d.tidyBy !== 'ai' && !tidying && (
+            <p className="note">
+              {t('AI 대본 작가가 아직 연결되지 않아 내용은 바뀌지 않았어요. 관리자 › 운영 설정에 AI 대본 작가 서버 주소를 넣으면, 녹음한 이야기를 드라마·숏츠 대본처럼 다시 써 줘요.')}
+            </p>
+          )}
           <p className="label">
-            {t('욕·거친 표현')} <span className="muted small">{t('다시 누르면 그 기준으로 다시 정리해요')}</span>
+            {t('대본 스타일')} <span className="muted small">{t('바꾸면 그 스타일로 다시 써요')}</span>
           </p>
-          <div className="radio-list">
-            {SPICE.map((sp) => (
-              <label key={sp.id} className={`radio ${(d.spice ?? 'keep') === sp.id ? 'radio-on' : ''}`}>
-                <input
-                  type="radio"
-                  name="spice"
-                  checked={(d.spice ?? 'keep') === sp.id}
-                  disabled={tidying}
-                  onChange={() => runTidy({ spice: sp.id })}
-                />
-                <span>
-                  <strong>{t(sp.name)}</strong> <span className="small muted">— {t(sp.desc)}</span>
-                </span>
-              </label>
+          <div className="chip-row chip-wrap">
+            {STYLES.map((st) => (
+              <Chip key={st.id} active={(d.style ?? 'shorts') === st.id} onClick={() => !tidying && runTidy({ style: st.id })}>
+                {t(st.name)}
+              </Chip>
             ))}
           </div>
-          <Toggle id="adapt" label={t('창작적 각색 허용 (분위기 묘사·연결 문장 보태기)')} checked={!!d.adapt} onChange={(v) => runTidy({ adapt: v })} />
+          <p className="muted small">{t(STYLES.find((st) => st.id === (d.style ?? 'shorts'))?.desc ?? '')}</p>
+          <details className="section">
+            <summary>
+              <span>{t('욕·거친 표현')}</span>
+              <span className="summary-val">{t(SPICE.find((sp) => sp.id === (d.spice ?? 'keep'))?.name ?? '')}</span>
+            </summary>
+            <div className="section-body">
+              <div className="radio-list">
+                {SPICE.map((sp) => (
+                  <label key={sp.id} className={`radio ${(d.spice ?? 'keep') === sp.id ? 'radio-on' : ''}`}>
+                    <input
+                      type="radio"
+                      name="spice"
+                      checked={(d.spice ?? 'keep') === sp.id}
+                      disabled={tidying}
+                      onChange={() => runTidy({ spice: sp.id })}
+                    />
+                    <span>
+                      <strong>{t(sp.name)}</strong> <span className="small muted">— {t(sp.desc)}</span>
+                    </span>
+                  </label>
+                ))}
+              </div>
+              <Toggle id="adapt" label={t('살 붙이기 허용 (묘사·대사·속마음을 보태서 더 재밌게)')} checked={d.adapt ?? (d.style ?? 'shorts') !== 'plain'} onChange={(v) => runTidy({ adapt: v })} />
+            </div>
+          </details>
           <div className="compare">
             <div>
               <p className="label">{t('정리안 (직접 고칠 수 있어요)')}</p>
@@ -523,16 +547,24 @@ export function Create({ draftId, onDone }) {
                 <span className="small muted"> — {t('녹음 업로드는 2단계. 지금은 선택만 되고 재생은 자막으로만 돼요.')}</span>
               </span>
             </label>
-            {VOICE_PRESETS.map((v) => (
-              <label key={v.id} className={`radio radio-voice ${d.voice === 'ai' && d.aiVoiceName === v.id ? 'radio-on' : ''}`}>
-                <input type="radio" name="voice" checked={d.voice === 'ai' && d.aiVoiceName === v.id} onChange={() => patch({ voice: 'ai', aiVoiceName: v.id })} />
-                <span>
-                  <strong>{t(v.name)}</strong> <span className="small muted">— {t(v.desc)}</span>
-                </span>
-                <VoiceSample text={sentences[0] ?? t('안녕하세요, 썰에 오신 걸 환영해요.')} choice={v.id} lang={state.prefs.lang} />
-              </label>
-            ))}
           </div>
+          {VOICE_GROUPS.map((g) => (
+            <div key={g.id} className="voice-group">
+              <p className="label">{t(g.name)}</p>
+              <div className="radio-list">
+                {VOICE_PRESETS.filter((v) => v.gender === g.id).map((v) => (
+                  <label key={v.id} className={`radio radio-voice ${d.voice === 'ai' && d.aiVoiceName === v.id ? 'radio-on' : ''}`}>
+                    <input type="radio" name="voice" checked={d.voice === 'ai' && d.aiVoiceName === v.id} onChange={() => patch({ voice: 'ai', aiVoiceName: v.id })} />
+                    <span>
+                      <strong>{t(v.name)}</strong> <span className="small muted">— {t(v.desc)}</span>
+                    </span>
+                    <VoiceSample text={sentences[0] ?? t('안녕하세요, 썰에 오신 걸 환영해요.')} choice={v.id} lang={state.prefs.lang} />
+                  </label>
+                ))}
+              </div>
+            </div>
+          ))}
+          <p className="muted small">{t('기기에 남성(또는 여성) 음성이 없으면 높낮이로 흉내 내요. 설정 › 목소리에서 성별별 기본 음성을 직접 고를 수 있어요.')}</p>
           <p className="muted small">{t('자기 목소리 복제, 유명인·타인 목소리 모방은 제공하지 않아요. 듣는 사람은 설정에서 자기가 좋아하는 목소리로 바꿔 들을 수도 있어요.')}</p>
           <div className="btn-row">
             <Button onClick={prev}>{t('이전')}</Button>

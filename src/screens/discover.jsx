@@ -36,7 +36,6 @@ export function Discover() {
   const t = useT();
   const [cat, setCat] = useState('all');
   const cps = state.ops.charsPerSec;
-  const shorts = useMemo(() => works.filter((w) => totalSec(w.sentences, cps) <= state.ops.shortMaxSec), [works, cps, state.ops.shortMaxSec]);
   const newCreators = CREATORS.filter((c) => c.isNew || subscriberCount(c, state) < 200);
   const grid = useMemo(() => {
     const list = works.filter((w) => !state.notInterested.includes(w.id) && (cat === 'all' || w.category === cat));
@@ -51,12 +50,6 @@ export function Discover() {
     <div className="screen screen-explore">
       <SearchBox />
       <div className="chip-row explore-chips" role="group" aria-label={t('카테고리')}>
-        <Chip className="chip-accent" onClick={() => push({ kind: 'ranking' })}>
-          <Icon name="star" size={14} /> {t('인기순위')}
-        </Chip>
-        <Chip className="chip-accent" onClick={() => push({ kind: 'shorts' })}>
-          <Icon name="clock" size={14} /> {t('30초 썰')} <span className="count">{shorts.length}</span>
-        </Chip>
         <Chip active={cat === 'all'} onClick={() => setCat('all')}>
           {t('전체')}
         </Chip>
@@ -67,7 +60,15 @@ export function Discover() {
         ))}
       </div>
       <WorkGrid works={grid} queue mosaic bleed />
-      <SectionHead title={t('인기 해시태그')} sub={t('누르면 관련 작품으로')} />
+      <SectionHead
+        title={t('인기 해시태그')}
+        sub={t('누르면 관련 작품으로')}
+        action={
+          <Button size="sm" variant="ghost" icon="star" className="btn-more" onClick={() => push({ kind: 'ranking' })}>
+            {t('인기순위')}
+          </Button>
+        }
+      />
       <div className="chip-row chip-wrap">
         {topTags(works).map(([tag, n]) => (
           <Chip key={tag} onClick={() => push({ kind: 'tag', tag })}>

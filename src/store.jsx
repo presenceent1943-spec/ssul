@@ -28,7 +28,9 @@ export const DEFAULT_PREFS = {
   theme: 'system', // system | light | dark
   lang: detectLang(),
   voiceMode: 'creator', // creator: 작가가 고른 목소리 / mine: 내가 고른 목소리
-  myVoice: 'haneul', // 프리셋 id 또는 browser:<voiceURI>
+  myVoice: 'w30', // 페르소나 id 또는 browser:<voiceURI>
+  voiceFemale: '', // 여성 페르소나에 쓸 기기 음성(voiceURI). 비우면 자동
+  voiceMale: '', // 남성 페르소나에 쓸 기기 음성(voiceURI). 비우면 자동
   pitchAdj: 1,
   homeView: 'list', // list | grid
 };

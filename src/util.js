@@ -1,7 +1,7 @@
 // 문장 분리·길이 추정·텍스트 정리 등 순수 유틸
 export function splitSentences(text) {
   const out = [];
-  const re = /[^.!?…\n]+[.!?…]*/g;
+  const re = /[^.!?…\n]+[.!?…]*["”’)]*/g;
   let m;
   while ((m = re.exec(text)) !== null) {
     const s = m[0].trim();

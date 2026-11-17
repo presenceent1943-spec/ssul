@@ -148,42 +148,30 @@ export function coverStyle(cover, hue, dark) {
   return { background: `linear-gradient(145deg, oklch(0.9 0.07 ${hue}), oklch(0.7 0.13 ${hue}))` };
 }
 
-function coverFg(cover, dark) {
-  if (cover?.kind === 'image' || cover?.kind === 'preset' || dark) return '#fff';
-  return 'oklch(0.28 0.08 0 / .92)';
-}
-
-// 대표 이미지: 큰 글씨로 카테고리를 써 넣는다 (연애·공포·일상·감동…)
-export function Cover({ category, hue, cover, size = 56, label, radius, className = '', word }) {
+// 대표 이미지: 그림(또는 색)을 크게 보여 주고, 카테고리는 작은 라벨로만 표시한다
+export function Cover({ category, hue, cover, size = 56, h, label, radius, className = '', word }) {
   const t = useT();
   const cat = CAT[category];
-  const h = hue ?? cat?.hue ?? 30;
+  const hu = hue ?? cat?.hue ?? 30;
   const dark = category === 'horror' && !cover;
-  const fg = coverFg(cover, dark);
   const text = word ?? t(cat?.short ?? '썰');
-  const fs = size * (text.length <= 2 ? 0.36 : text.length <= 4 ? 0.26 : 0.2);
   return (
-    <span className={`cover ${cover?.kind === 'image' ? 'cover-img' : ''} ${className}`} style={{ width: size, height: size, borderRadius: radius, ...coverStyle(cover, h, dark) }} aria-hidden="true">
-      <span className="cover-word" style={{ fontSize: fs, color: fg }}>
-        {text}
-      </span>
+    <span className={`cover ${cover?.kind === 'image' ? 'cover-img' : ''} ${className}`} style={{ width: size, height: h ?? size, borderRadius: radius, ...coverStyle(cover, hu, dark) }} aria-hidden="true">
+      {size >= 48 && <span className="cover-cat">{text}</span>}
       {label && <span className="cover-label">{label}</span>}
     </span>
   );
 }
 
-// 정사각 타일(그리드용): 꽉 채우는 커버 + 제목
+// 정사각 타일(그리드용): 꽉 채우는 커버 + 작은 카테고리 라벨 + 제목
 export function CoverFill({ work, children }) {
   const t = useT();
   const cat = CAT[work.category];
   const dark = work.category === 'horror' && !work.cover;
-  const fg = coverFg(work.cover, dark);
   const text = t(cat.short);
   return (
     <span className={`cover-fill ${work.cover?.kind === 'image' ? 'cover-img' : ''}`} style={coverStyle(work.cover, work.hue ?? cat.hue, dark)}>
-      <span className="cover-fill-word" style={{ color: fg }}>
-        {text}
-      </span>
+      <span className="cover-cat cover-fill-cat">{text}</span>
       {children}
     </span>
   );
@@ -395,7 +383,9 @@ export function WorkGrid({ works, queue, emptyText, mosaic = false, bleed = fals
               <span className="tile-mark" aria-hidden="true">
                 {w.paid ? <Icon name="lock" size={14} /> : w.seriesId ? <Icon name="layers" size={14} /> : null}
               </span>
-              <span className="tile-name">{w.title}</span>
+              <span className="tile-name">
+                <span className="tile-name-text">{w.title}</span>
+              </span>
             </CoverFill>
           </button>
         );

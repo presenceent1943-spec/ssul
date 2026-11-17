@@ -7,7 +7,7 @@ import { clock } from '../util.js';
 import { fmtDur, fmtKRW } from '../i18n.js';
 import { VoicePicker } from './me.jsx';
 import { voiceFor } from '../player.js';
-import { PRESET } from '../speech.js';
+import { PRESET, DEFAULT_VOICE } from '../speech.js';
 
 const SPEEDS = [0.8, 1, 1.2, 1.5, 2];
 
@@ -61,7 +61,7 @@ export function FullPlayer() {
   const pct = total ? (ui.time / total) * 100 : 0;
   const voiceOk = state.prefs.voiceOn && ui.voiceReady;
   const v = voiceFor(work, state.prefs);
-  const voiceName = state.prefs.voiceMode === 'mine' ? (state.prefs.myVoice.startsWith('browser:') ? v.label : t(PRESET[state.prefs.myVoice]?.name ?? '')) : t(PRESET[work.aiVoiceName]?.name ?? '하늘');
+  const voiceName = state.prefs.voiceMode === 'mine' ? (state.prefs.myVoice.startsWith('browser:') ? v.label : t(PRESET[state.prefs.myVoice]?.name ?? '')) : t(PRESET[work.aiVoiceName]?.name ?? PRESET[DEFAULT_VOICE].name);
   const sleepLabel = (s) => (s.kind === 'off' ? t('수면') : s.kind === 'end' ? t('끝나면') : t('{n}분', { n: Math.max(0, Math.ceil((s.endsAt - Date.now()) / 6e4)) }));
   return (
     <div className="player-backdrop" onClick={() => player.setExpanded(false)} role="presentation">
