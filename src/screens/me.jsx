@@ -235,6 +235,17 @@ export function Settings({ section }) {
       </div>
       <p className="muted small">{t('메뉴와 안내 문구가 바뀌어요. 작품 내용은 작가가 쓴 언어 그대로예요.')}</p>
 
+      <SectionHead title={t('홈 화면')} />
+      <div className="seg seg-wide" role="tablist" aria-label={t('홈 화면 방식')}>
+        <button type="button" role="tab" aria-selected={(p.homeMode ?? 'feed') === 'feed'} className={(p.homeMode ?? 'feed') === 'feed' ? 'seg-on' : ''} onClick={() => set({ homeMode: 'feed' })}>
+          {t('세로 피드')}
+        </button>
+        <button type="button" role="tab" aria-selected={p.homeMode === 'list'} className={p.homeMode === 'list' ? 'seg-on' : ''} onClick={() => set({ homeMode: 'list' })}>
+          {t('목록')}
+        </button>
+      </div>
+      <p className="muted small">{t('세로 피드는 한 화면에 한 이야기, 위로 넘기며 들어요. 목록은 예전처럼 카드 목록이에요.')}</p>
+
       <SectionHead title={t('화면')} />
       <div className="seg seg-wide" role="tablist" aria-label={t('화면 모드')}>
         {[
@@ -293,6 +304,7 @@ export function Settings({ section }) {
           {t('데모 데이터 초기화')}
         </Button>
       )}
+      <p className="muted small">{t('데모 — 모든 작품·창작자·수치는 시연용 가상 데이터 · 샘플은 생성된 음성, 새 작품은 서버 연결 전까지 기기 음성 · 결제는 연결 전')}</p>
     </div>
   );
 }

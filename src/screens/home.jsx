@@ -5,6 +5,7 @@ import { useApp } from '../app-ctx.js';
 import { Button, Chip, Cover, Empty, Icon, Logo, SectionHead, ViewToggle, WorkGrid, WorkList } from '../ui.jsx';
 import { totalSec } from '../util.js';
 import { fmtDur } from '../i18n.js';
+import { Feed } from './feed.jsx';
 
 export function ThemeQuickToggle() {
   const { state, dispatch } = useStore();
@@ -46,14 +47,21 @@ function ShortsStrip({ works, cps }) {
   );
 }
 
+// 홈: 기본은 틱톡식 세로 피드. 설정에서 '목록'으로 바꾸면 예전 목록 화면.
 export function Home() {
+  const { state } = useStore();
+  if (state.prefs.homeMode !== 'list') return <Feed />;
+  return <HomeList />;
+}
+
+export function HomeList() {
   const { state, works, creators, dispatch } = useStore();
   const { push, setTab, playWork } = useApp();
   const t = useT();
   const [feed, setFeed] = useState('reco');
   const [cat, setCat] = useState('all');
   const cps = state.ops.charsPerSec;
-  const view = state.prefs.homeView;
+  const view = state.prefs.homeView === 'grid' ? 'grid' : 'list';
   const visible = useMemo(() => works.filter((w) => !state.notInterested.includes(w.id)), [works, state.notInterested]);
   const reco = useMemo(
     () =>
@@ -114,7 +122,12 @@ export function Home() {
             {state.subscriptions.length > 0 && <span className="count">{state.subscriptions.length}</span>}
           </button>
         </div>
-        <ViewToggle view={view} onChange={(v) => dispatch({ type: 'setPrefs', prefs: { homeView: v } })} />
+        <div className="row-gap">
+          <ViewToggle view={view} onChange={(v) => dispatch({ type: 'setPrefs', prefs: { homeView: v } })} />
+          <Button size="sm" variant="ghost" icon="play" className="btn-more" onClick={() => dispatch({ type: 'setPrefs', prefs: { homeMode: 'feed' } })}>
+            {t('피드로')}
+          </Button>
+        </div>
       </div>
 
       {feed === 'reco' ? (

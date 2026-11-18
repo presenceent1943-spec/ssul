@@ -232,7 +232,8 @@ export function App() {
     }),
     [tab, page, setTab, push, back, player, requireLogin, share, show, playWork]
   );
-  const cls = `app ${state.prefs.bigText ? 'big-text' : ''} ${state.prefs.easyMode ? 'easy' : ''}`;
+  const immersive = page?.kind === 'shorts' || (!page && tab === 'home' && state.prefs.homeMode !== 'list');
+  const cls = `app ${state.prefs.bigText ? 'big-text' : ''} ${state.prefs.easyMode ? 'easy' : ''} ${immersive ? 'app-immersive' : ''}`;
 
   return (
     <AppCtx.Provider value={ctx}>
@@ -254,9 +255,6 @@ export function App() {
         </nav>
         <div className="center">
           {!state.onboarded && <Onboarding onDone={(interests) => dispatch({ type: 'onboard', interests })} />}
-          <div className="demo-banner" role="note">
-            {t('데모 — 모든 작품·창작자·수치는 시연용 가상 데이터 · 음성은 기기 내장 TTS · 결제·AI는 연결 전')}
-          </div>
           <InstallBanner />
           <main className="content" ref={mainRef}>
             {page?.kind === 'shorts' ? (
@@ -278,7 +276,7 @@ export function App() {
               />
             )}
           </main>
-          <MiniPlayer />
+          {!immersive && <MiniPlayer />}
           <nav className="tabbar" aria-label={t('주 메뉴')}>
             {TABS.map((x) => (
               <button key={x.id} type="button" className={`tab ${tab === x.id ? 'tab-on' : ''} ${x.id === 'create' ? 'tab-create' : ''}`} onClick={() => setTab(x.id)} aria-current={tab === x.id ? 'page' : undefined}>

@@ -26,14 +26,15 @@ export const DEFAULT_PREFS = {
   sleepSafe: true,
   speed: 1,
   voiceOn: true,
-  theme: 'system', // system | light | dark
+  theme: 'dark', // system | light | dark
   lang: detectLang(),
   voiceMode: 'creator', // creator: 작가가 고른 목소리 / mine: 내가 고른 목소리
   myVoice: 'w30', // 페르소나 id 또는 browser:<voiceURI>
   voiceFemale: '', // 여성 페르소나에 쓸 기기 음성(voiceURI). 비우면 자동
   voiceMale: '', // 남성 페르소나에 쓸 기기 음성(voiceURI). 비우면 자동
   pitchAdj: 1,
-  homeView: 'list', // list | grid
+  homeView: 'list', // 목록 화면일 때 list | grid
+  homeMode: 'feed', // feed(세로 피드) | list(목록)
 };
 
 // 프로필 배경 프리셋 (꾸미기)

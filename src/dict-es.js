@@ -713,4 +713,11 @@ export const es = {
   '{name} 목소리 · 완성된 음성 파일': 'Voz {name} · archivo de audio final',
   '이 작품은 작가가 고른 목소리로 완성된 음성 파일이라 목소리를 바꿀 수 없어요. 아래 설정은 기기 음성으로 재생되는 작품에 적용돼요.': 'Esta historia es un archivo de audio final con la voz elegida por su autor, así que no se puede cambiar. Los ajustes de abajo se aplican a historias leídas por la voz del dispositivo.',
   '화자': 'Narrador',
+  '유료': 'De pago',
+  '피드로': 'Ir al feed',
+  '홈 화면': 'Pantalla de inicio',
+  '홈 화면 방식': 'Diseño de inicio',
+  '세로 피드': 'Feed vertical',
+  '세로 피드는 한 화면에 한 이야기, 위로 넘기며 들어요. 목록은 예전처럼 카드 목록이에요.': 'El feed vertical muestra una historia por pantalla; desliza hacia arriba para seguir. La lista es la vista clásica de tarjetas.',
+  '데모 — 모든 작품·창작자·수치는 시연용 가상 데이터 · 샘플은 생성된 음성, 새 작품은 서버 연결 전까지 기기 음성 · 결제는 연결 전': 'Demo — historias, creadores y cifras son datos de muestra · las muestras usan voces generadas; las nuevas usan la voz del dispositivo hasta conectar un servidor · pagos no conectados',
 };
