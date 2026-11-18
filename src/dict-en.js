@@ -720,4 +720,10 @@ export const en = {
   '세로 피드': 'Vertical feed',
   '세로 피드는 한 화면에 한 이야기, 위로 넘기며 들어요. 목록은 예전처럼 카드 목록이에요.': 'The vertical feed shows one story per screen — swipe up to keep listening. List is the classic card list.',
   '데모 — 모든 작품·창작자·수치는 시연용 가상 데이터 · 샘플은 생성된 음성, 새 작품은 서버 연결 전까지 기기 음성 · 결제는 연결 전': 'Demo — all stories, creators and numbers are sample data · samples use generated voices, new stories use the device voice until a server is connected · payments not connected',
+  '30초': 'Shorts',
+  '저장한 작품·이어 듣기·초안': 'Saved · continue listening · drafts',
+  '카드 피드': 'Card feed',
+  '카드 피드는 인스타그램처럼 내려 보며 듣고, 세로 피드는 한 화면에 한 이야기씩 위로 넘기며 들어요.': 'The card feed scrolls like Instagram; the vertical feed shows one story per screen and swipes up.',
+  '새 소식': 'What’s new',
+  '청취 {n}': '{n} listens',
 };

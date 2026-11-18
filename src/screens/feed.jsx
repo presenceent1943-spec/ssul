@@ -73,7 +73,7 @@ export function Feed({ only, startId, title, backable = false }) {
     if (curIdRef.current === w.id) return;
     curIdRef.current = w.id;
     const playing = player.ui.workId && player.ui.playing;
-    if (playing && player.ui.workId !== w.id && armed.current) playWork(w.id, list.slice(cur + 1).map((x) => x.id));
+    if (playing && player.ui.workId !== w.id && armed.current) playWork(w.id, list.slice(cur + 1).map((x) => x.id), { expanded: false });
     else if (player.ui.workId && player.ui.workId !== w.id && player.ui.playing) player.pause();
   }, [cur, list]); // eslint-disable-line
 
@@ -87,7 +87,7 @@ export function Feed({ only, startId, title, backable = false }) {
       setFlash({ i, kind: player.ui.playing ? 'pause' : 'play' });
     } else {
       armed.current = true;
-      playWork(w.id, list.slice(i + 1).map((x) => x.id));
+      playWork(w.id, list.slice(i + 1).map((x) => x.id), { expanded: false });
       setFlash({ i, kind: 'play' });
     }
     window.setTimeout(() => setFlash(null), 600);
@@ -143,7 +143,7 @@ export function Feed({ only, startId, title, backable = false }) {
             {t('전체')}
           </Chip>
           {CATEGORIES.map((c) => (
-            <Chip key={c.id} active={cat === c.id} onClick={() => setCat(c.id)}>
+            <Chip key={c.id} active={cat === c.id} onClick={() => setCat(c.id)} className="chip-cat" style={{ '--h': c.hue }}>
               {t(c.short)}
             </Chip>
           ))}

@@ -1,4 +1,4 @@
-import { useEffect, useLayoutEffect, useRef, useState } from 'react';
+import { useEffect, useId, useLayoutEffect, useRef, useState } from 'react';
 import { CAT } from './data.js';
 import { COVER_PRESETS, displayName, useStore, useT } from './store.jsx';
 import { useApp } from './app-ctx.js';
@@ -57,12 +57,20 @@ export function Icon({ name, size = 20, className }) {
 
 // 로고: 말풍선 안의 '썰'
 export function Logo({ size = 36, wordmark = false, className = '' }) {
+  const gid = `ssul-grad-${useId().replace(/[^a-zA-Z0-9]/g, '')}`;
   return (
     <span className={`logo ${className}`} style={{ '--logo-size': `${size}px` }} aria-label="썰" role="img">
       <svg width={size} height={size} viewBox="0 0 64 64" aria-hidden="true">
-        <path d="M14 7h36c6 0 10 4 10 10v24c0 6-4 10-10 10H30L16 61v-10h-2C8 51 4 47 4 41V17C4 11 8 7 14 7z" fill="var(--accent)" />
+        <defs>
+          <linearGradient id={gid} x1="0" y1="0" x2="1" y2="1">
+            <stop offset="0" stopColor="#7b5cff" />
+            <stop offset="0.55" stopColor="#e052c6" />
+            <stop offset="1" stopColor="#3fc1ff" />
+          </linearGradient>
+        </defs>
+        <path d="M14 7h36c6 0 10 4 10 10v24c0 6-4 10-10 10H30L16 61v-10h-2C8 51 4 47 4 41V17C4 11 8 7 14 7z" fill={`url(#${gid})`} />
         <path d="M14 7h36c6 0 10 4 10 10v24c0 6-4 10-10 10H30L16 61v-10h-2C8 51 4 47 4 41V17C4 11 8 7 14 7z" fill="none" stroke="rgba(0,0,0,.12)" strokeWidth="1.5" />
-        <text x="32" y="30" textAnchor="middle" dominantBaseline="central" fontFamily="'Jua', 'Black Han Sans', sans-serif" fontSize="30" fill="var(--accent-fg)">
+        <text x="32" y="30" textAnchor="middle" dominantBaseline="central" fontFamily="'Jua', 'Black Han Sans', sans-serif" fontSize="30" fill="#fff">
           썰
         </text>
       </svg>
@@ -80,9 +88,9 @@ export function Button({ variant = 'secondary', size = 'md', icon, block, classN
   );
 }
 
-export function Chip({ active, onClick, children, className = '' }) {
+export function Chip({ active, onClick, children, className = '', style }) {
   return (
-    <button type="button" className={`chip ${active ? 'chip-on' : ''} ${className}`} onClick={onClick} aria-pressed={active}>
+    <button type="button" className={`chip ${active ? 'chip-on' : ''} ${className}`} style={style} onClick={onClick} aria-pressed={active}>
       {children}
     </button>
   );

@@ -23,7 +23,7 @@ const TABS = [
   { id: 'home', label: '홈', icon: 'home' },
   { id: 'discover', label: '발견', icon: 'compass' },
   { id: 'create', label: '만들기', icon: 'plus' },
-  { id: 'library', label: '보관함', icon: 'bookmark' },
+  { id: 'shorts', label: '30초', icon: 'clock' },
   { id: 'me', label: '내 정보', icon: 'user' },
 ];
 
@@ -58,6 +58,8 @@ function Page({ tab, page, draftId, createKey, onCreateDone, onOpenDraft }) {
         return <Notifications />;
       case 'purchases':
         return <Purchases />;
+      case 'library':
+        return <Library onOpenDraft={onOpenDraft} />;
       default:
         return null;
     }
@@ -68,8 +70,8 @@ function Page({ tab, page, draftId, createKey, onCreateDone, onOpenDraft }) {
       return <Discover />;
     case 'create':
       return <Create key={createKey} draftId={draftId} onDone={onCreateDone} />;
-    case 'library':
-      return <Library onOpenDraft={onOpenDraft} />;
+    case 'shorts':
+      return <Shorts />;
     case 'me':
       return <MyPage />;
     default:
@@ -142,7 +144,7 @@ export function App() {
   const t = useT();
   const player = usePlayer();
   const [tab, setTabState] = useState('home');
-  const [stacks, setStacks] = useState({ home: [], discover: [], create: [], library: [], me: [] });
+  const [stacks, setStacks] = useState({ home: [], discover: [], create: [], library: [], shorts: [], me: [] });
   const [loginOpen, setLoginOpen] = useState(false);
   const pending = useRef(null);
   const [purchaseId, setPurchaseId] = useState(null);
@@ -183,7 +185,7 @@ export function App() {
     },
     [state.loggedIn]
   );
-  const playWork = useCallback((id, queue) => player.load(id, { autoplay: true, expanded: true, queue: queue ?? [] }), [player]);
+  const playWork = useCallback((id, queue, opt) => player.load(id, { autoplay: true, expanded: opt?.expanded ?? true, queue: queue ?? [] }), [player]);
   const share = useCallback(
     (id) => {
       const url = workLink(id);
@@ -232,7 +234,7 @@ export function App() {
     }),
     [tab, page, setTab, push, back, player, requireLogin, share, show, playWork]
   );
-  const immersive = page?.kind === 'shorts' || (!page && tab === 'home' && state.prefs.homeMode !== 'list');
+  const immersive = page?.kind === 'shorts' || (!page && tab === 'shorts') || (!page && tab === 'home' && (state.prefs.homeMode === 'vertical' || state.prefs.homeMode === 'feed'));
   const cls = `app ${state.prefs.bigText ? 'big-text' : ''} ${state.prefs.easyMode ? 'easy' : ''} ${immersive ? 'app-immersive' : ''}`;
 
   return (

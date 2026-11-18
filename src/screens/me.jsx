@@ -35,6 +35,7 @@ export function MyPage() {
           }
         />
         <div className="list">
+          <Row label={t('보관함')} sub={t('저장한 작품·이어 듣기·초안')} onClick={() => push({ kind: 'library' })} icon="bookmark" />
           <Row label={t('설정')} sub={t('언어·다크 모드·큰 글씨·목소리')} onClick={() => push({ kind: 'settings' })} icon="settings" />
           <Row label={t('관리자 화면 (데모)')} onClick={() => push({ kind: 'admin' })} />
         </div>
@@ -80,6 +81,7 @@ export function MyPage() {
       />
       <WorkGrid works={mine} emptyText={t('아직 게시한 작품이 없어요. 만들기에서 첫 이야기를 올려 보세요.')} />
       <div className="list">
+        <Row label={t('보관함')} sub={t('저장한 작품·이어 듣기·초안')} onClick={() => push({ kind: 'library' })} icon="bookmark" />
         <Row label={t('창작자 통계')} sub={t('유효 청취·완청률·구독 전환')} onClick={() => push({ kind: 'stats' })} />
         <Row label={t('유료화 신청')} sub={state.paidApplications[0] ? t('상태: {s}', { s: paidStatusLabel(state.paidApplications[0].status, t) }) : t('구독자 {n}명 이상이면 신청 가능', { n: state.ops.paidEligibleSubs })} onClick={() => push({ kind: 'paid-apply' })} />
         <Row label={t('구매 내역')} onClick={() => push({ kind: 'purchases' })} />
@@ -237,14 +239,20 @@ export function Settings({ section }) {
 
       <SectionHead title={t('홈 화면')} />
       <div className="seg seg-wide" role="tablist" aria-label={t('홈 화면 방식')}>
-        <button type="button" role="tab" aria-selected={(p.homeMode ?? 'feed') === 'feed'} className={(p.homeMode ?? 'feed') === 'feed' ? 'seg-on' : ''} onClick={() => set({ homeMode: 'feed' })}>
-          {t('세로 피드')}
-        </button>
-        <button type="button" role="tab" aria-selected={p.homeMode === 'list'} className={p.homeMode === 'list' ? 'seg-on' : ''} onClick={() => set({ homeMode: 'list' })}>
-          {t('목록')}
-        </button>
+        {[
+          ['cards', t('카드 피드')],
+          ['vertical', t('세로 피드')],
+          ['list', t('목록')],
+        ].map(([id, label]) => {
+          const on = (p.homeMode === 'feed' ? 'vertical' : p.homeMode ?? 'cards') === id;
+          return (
+            <button key={id} type="button" role="tab" aria-selected={on} className={on ? 'seg-on' : ''} onClick={() => set({ homeMode: id })}>
+              {label}
+            </button>
+          );
+        })}
       </div>
-      <p className="muted small">{t('세로 피드는 한 화면에 한 이야기, 위로 넘기며 들어요. 목록은 예전처럼 카드 목록이에요.')}</p>
+      <p className="muted small">{t('카드 피드는 인스타그램처럼 내려 보며 듣고, 세로 피드는 한 화면에 한 이야기씩 위로 넘기며 들어요.')}</p>
 
       <SectionHead title={t('화면')} />
       <div className="seg seg-wide" role="tablist" aria-label={t('화면 모드')}>

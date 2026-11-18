@@ -6,6 +6,7 @@ import { Button, Chip, Cover, Empty, Icon, Logo, SectionHead, ViewToggle, WorkGr
 import { totalSec } from '../util.js';
 import { fmtDur } from '../i18n.js';
 import { Feed } from './feed.jsx';
+import { HomePosts } from './posts.jsx';
 
 export function ThemeQuickToggle() {
   const { state, dispatch } = useStore();
@@ -47,11 +48,13 @@ function ShortsStrip({ works, cps }) {
   );
 }
 
-// 홈: 기본은 틱톡식 세로 피드. 설정에서 '목록'으로 바꾸면 예전 목록 화면.
+// 홈: 기본은 인스타·유튜브식 카드 피드. 설정에서 세로 피드(틱톡식)나 예전 목록으로 바꿀 수 있다.
 export function Home() {
   const { state } = useStore();
-  if (state.prefs.homeMode !== 'list') return <Feed />;
-  return <HomeList />;
+  const mode = state.prefs.homeMode ?? 'cards';
+  if (mode === 'vertical' || mode === 'feed') return <Feed />;
+  if (mode === 'list') return <HomeList />;
+  return <HomePosts />;
 }
 
 export function HomeList() {
@@ -124,7 +127,7 @@ export function HomeList() {
         </div>
         <div className="row-gap">
           <ViewToggle view={view} onChange={(v) => dispatch({ type: 'setPrefs', prefs: { homeView: v } })} />
-          <Button size="sm" variant="ghost" icon="play" className="btn-more" onClick={() => dispatch({ type: 'setPrefs', prefs: { homeMode: 'feed' } })}>
+          <Button size="sm" variant="ghost" icon="play" className="btn-more" onClick={() => dispatch({ type: 'setPrefs', prefs: { homeMode: 'cards' } })}>
             {t('피드로')}
           </Button>
         </div>

@@ -261,3 +261,137 @@
 @media (min-width: 800px) {
   .feed { max-width: 480px; margin: 0 auto; border-radius: 0; }
 }
+
+/* ===== 4차: 인스타그램 × 유튜브 — 주황 없는 보라·핑크·하늘 그라데이션 브랜드 ===== */
+:root {
+  --grad: linear-gradient(135deg, #7b5cff 0%, #e052c6 55%, #3fc1ff 100%);
+  --grad-soft: linear-gradient(135deg, rgba(123, 92, 255, 0.18), rgba(224, 82, 198, 0.18), rgba(63, 193, 255, 0.18));
+  /* 밝은 테마: 인스타그램처럼 흰 바탕 */
+  --bg: #ffffff;
+  --surface: #ffffff;
+  --surface-2: #f2f2f6;
+  --fg: #111114;
+  --muted: #74747f;
+  --line: #e6e6ec;
+  --accent: #6d5dfc;
+  --accent-fg: #fff;
+  --accent-soft: #ecebff;
+  --accent-deep: #4d3dd6;
+  --paid: #8a6a00;
+  --paid-soft: #fff3c4;
+  --cover-dark: #1c1c24;
+  --shadow: 0 10px 30px rgba(20, 20, 40, 0.12);
+}
+:root[data-theme=dark] {
+  --bg: #0f0f0f;
+  --surface: #181818;
+  --surface-2: #272727;
+  --fg: #f1f1f1;
+  --muted: #a9a9b3;
+  --line: #2e2e33;
+  --accent: #8f7bff;
+  --accent-fg: #fff;
+  --accent-soft: #2a2347;
+  --accent-deep: #b8aaff;
+  --paid: #f2c86b;
+  --paid-soft: #3a2f14;
+  --cover-dark: #141418;
+  --shadow: 0 10px 30px #000000a0;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme=light]) {
+    --bg: #0f0f0f;
+    --surface: #181818;
+    --surface-2: #272727;
+    --fg: #f1f1f1;
+    --muted: #a9a9b3;
+    --line: #2e2e33;
+    --accent: #8f7bff;
+    --accent-fg: #fff;
+    --accent-soft: #2a2347;
+    --accent-deep: #b8aaff;
+    --paid: #f2c86b;
+    --paid-soft: #3a2f14;
+    --cover-dark: #141418;
+    --shadow: 0 10px 30px #000000a0;
+  }
+}
+.btn-primary { background: var(--grad); color: #fff; border-color: transparent; }
+.logo-word { background: var(--grad); -webkit-background-clip: text; background-clip: text; color: transparent; }
+.tab-create svg { background: var(--grad); box-shadow: 0 4px 14px rgba(123, 92, 255, 0.4); }
+.play-pill-on, .short-play, .fcard-new, .rail-plus { background: var(--grad); }
+.caption-who { background: var(--grad-soft); color: var(--accent-deep); }
+.seg-on { background: var(--surface); }
+
+/* 카테고리 색 칩 (카테고리마다 다른 색) */
+.chip-cat { --h: 200; gap: 8px; }
+.chip-cat::before { content: ''; width: 8px; height: 8px; border-radius: 50%; background: oklch(0.72 0.16 var(--h)); flex: none; }
+.chip-cat.chip-on { background: oklch(0.86 0.1 var(--h)); color: oklch(0.28 0.09 var(--h)); border-color: transparent; }
+.chip-cat.chip-on::before { background: oklch(0.45 0.16 var(--h)); }
+:root[data-theme=dark] .chip-cat.chip-on { background: oklch(0.42 0.12 var(--h)); color: #fff; }
+:root[data-theme=dark] .chip-cat.chip-on::before { background: #fff; }
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme=light]) .chip-cat.chip-on { background: oklch(0.42 0.12 var(--h)); color: #fff; }
+  :root:not([data-theme=light]) .chip-cat.chip-on::before { background: #fff; }
+}
+
+/* 스토리 줄 (인스타그램) */
+.stories { display: flex; gap: 12px; overflow-x: auto; scrollbar-width: none; margin: 0 calc(-1 * var(--gutter-r)) 0 calc(-1 * var(--gutter-l)); padding: 2px var(--gutter-r) 2px var(--gutter-l); }
+.stories::-webkit-scrollbar { display: none; }
+.story { flex: none; width: 70px; background: none; border: 0; padding: 0; color: var(--fg); display: flex; flex-direction: column; align-items: center; gap: 6px; }
+.story-ring { width: 66px; height: 66px; border-radius: 50%; padding: 3px; background: var(--grad); display: flex; }
+.story-ring.story-seen { background: var(--line); }
+.story-inner { width: 100%; height: 100%; border-radius: 50%; background: var(--bg); padding: 2px; display: flex; align-items: center; justify-content: center; }
+.story-inner .avatar { width: 100% !important; height: 100% !important; }
+.story-icon { color: var(--fg); }
+.story-name { font-size: 0.72rem; max-width: 70px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+/* 추천 | 구독 중 (인스타 밑줄 탭) */
+.feed-seg-dark button { color: var(--muted); text-shadow: none; font-size: 1rem; }
+.feed-seg-dark button.on { color: var(--fg); }
+.feed-seg-dark button.on::after { background: var(--fg); }
+.feed-seg-dark .count { margin-left: 4px; }
+.posts-tabs { margin-top: -4px; }
+
+/* 카드 피드 (인스타 포스트 + 유튜브 썸네일) */
+.screen-posts { gap: 12px; }
+.posts { display: flex; flex-direction: column; gap: 22px; margin: 0 calc(-1 * var(--gutter-r)) 0 calc(-1 * var(--gutter-l)); }
+.post { display: flex; flex-direction: column; gap: 8px; }
+.post-head { display: flex; align-items: center; gap: 10px; padding: 0 var(--gutter-r) 0 var(--gutter-l); }
+.post-author { flex: 1; min-width: 0; display: flex; align-items: center; gap: 10px; background: none; border: 0; padding: 0; color: var(--fg); text-align: left; }
+.post-author-text { display: flex; flex-direction: column; min-width: 0; }
+.post-author-name { font-weight: 700; font-size: 0.95rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.post-author-sub { font-size: 0.76rem; color: var(--muted); }
+.post-more { color: var(--muted); }
+.post-media { position: relative; display: block; width: 100%; aspect-ratio: 4 / 5; border: 0; padding: 0; overflow: hidden; background: var(--cover-dark); background-size: cover !important; background-position: center !important; cursor: pointer; color: #fff; }
+@media (min-width: 600px) { .post-media { aspect-ratio: 1 / 1; } }
+.post-media::after { content: ''; position: absolute; inset: 0; background: linear-gradient(180deg, rgba(0, 0, 0, 0.2) 0%, rgba(0, 0, 0, 0) 25%, rgba(0, 0, 0, 0) 60%, rgba(0, 0, 0, 0.6) 100%); pointer-events: none; }
+.post-media > * { position: relative; z-index: 1; }
+.post-cat { position: absolute; top: 10px; left: 10px; font-size: 0.72rem; font-weight: 700; padding: 4px 9px; border-radius: 999px; background: oklch(0.5 0.15 var(--h) / 0.9); color: #fff; backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px); }
+.post-lock { position: absolute; top: 10px; right: 10px; font-size: 0.72rem; font-weight: 700; padding: 4px 9px; border-radius: 999px; background: rgba(0, 0, 0, 0.55); color: #fff; display: inline-flex; align-items: center; gap: 4px; }
+.post-dur { position: absolute; right: 10px; bottom: 10px; font-size: 0.74rem; font-weight: 700; padding: 3px 7px; border-radius: 6px; background: rgba(0, 0, 0, 0.75); color: #fff; }
+.post-play { position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); width: 72px; height: 72px; border-radius: 50%; background: rgba(255, 255, 255, 0.92); color: #111; display: flex; align-items: center; justify-content: center; box-shadow: 0 6px 20px rgba(0, 0, 0, 0.35); }
+.post-play svg { fill: #111; margin-left: 4px; }
+.post-caption { position: absolute; left: 14px; right: 14px; bottom: 16px; display: flex; flex-direction: column; gap: 4px; text-align: left; }
+.post-prev { font-family: var(--font-story); font-size: 0.9rem; color: rgba(255, 255, 255, 0.6); display: -webkit-box; -webkit-line-clamp: 1; -webkit-box-orient: vertical; overflow: hidden; }
+.post-now { font-family: var(--font-story); font-size: 1.1rem; font-weight: 700; line-height: 1.45; color: #fff; text-shadow: 0 1px 4px rgba(0, 0, 0, 0.7); display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; word-break: keep-all; }
+.post-progress { position: absolute; left: 0; right: 0; bottom: 0; height: 3px; background: rgba(255, 255, 255, 0.25); }
+.post-progress span { display: block; height: 100%; background: var(--grad); transition: width 0.2s linear; }
+.post-actions { display: flex; align-items: center; gap: 14px; padding: 0 var(--gutter-r) 0 var(--gutter-l); }
+.post-act { background: none; border: 0; padding: 0; color: var(--fg); display: inline-flex; align-items: center; gap: 6px; font-size: 0.86rem; font-weight: 600; min-height: 36px; }
+.post-act-on svg { fill: #e0457b; color: #e0457b; }
+.post-spacer { flex: 1; }
+.post-body { display: flex; flex-direction: column; gap: 4px; padding: 0 var(--gutter-r) 0 var(--gutter-l); }
+.post-title { margin: 0; }
+.post-title button { background: none; border: 0; padding: 0; color: var(--fg); text-align: left; font-family: var(--font-story); font-weight: 700; font-size: 1.12rem; line-height: 1.35; word-break: keep-all; }
+.post-snippet .more-body { font-size: 0.92rem; line-height: 1.55; color: var(--fg); opacity: 0.85; }
+.post-tags { margin: 0; display: flex; flex-wrap: wrap; gap: 8px; }
+.post-tags button { background: none; border: 0; padding: 0; color: var(--accent-deep); font-size: 0.86rem; font-weight: 600; }
+.post-meta { margin: 0; font-size: 0.76rem; color: var(--muted); }
+.big-text .post-title button { font-size: 1.25rem; }
+
+/* 틱톡식 세로 피드도 주황 대신 그라데이션 */
+.fcard-progress span { background: var(--grad); }
+.rail-on svg { fill: #e0457b; color: #e0457b; }
+.fcard-burst { color: #e0457b; fill: #e0457b; }
+.feed-chips .chip-cat::before { background: oklch(0.75 0.15 var(--h)); }

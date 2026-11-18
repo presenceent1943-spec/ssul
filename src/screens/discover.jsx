@@ -5,6 +5,7 @@ import { useApp } from '../app-ctx.js';
 import { Avatar, BackBar, Button, Chip, Empty, Icon, SectionHead, WorkGrid, WorkList } from '../ui.jsx';
 import { rankWorks, searchAll, topTags, totalSec, worksByTag } from '../util.js';
 import { fmtCount, periodLabel } from '../i18n.js';
+import { CategoryChips } from './posts.jsx';
 import { RANK_W, expectedCompletion } from '../util.js';
 
 export function SearchBox({ initial = '' }) {
@@ -49,15 +50,8 @@ export function Discover() {
   return (
     <div className="screen screen-explore">
       <SearchBox />
-      <div className="chip-row explore-chips" role="group" aria-label={t('카테고리')}>
-        <Chip active={cat === 'all'} onClick={() => setCat('all')}>
-          {t('전체')}
-        </Chip>
-        {CATEGORIES.map((c) => (
-          <Chip key={c.id} active={cat === c.id} onClick={() => setCat(c.id)}>
-            {t(c.short)}
-          </Chip>
-        ))}
+      <div className="explore-chips">
+        <CategoryChips value={cat} onChange={setCat} />
       </div>
       <WorkGrid works={grid} queue mosaic bleed />
       <SectionHead
