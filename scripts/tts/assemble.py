@@ -1,7 +1,7 @@
 import json, subprocess, os, re, sys, shutil
 import numpy as np
 
-W = json.load(open('assemble.json'))
+W = json.load(open(sys.argv[1] if len(sys.argv) > 1 else 'assemble.json'))
 os.makedirs('clips', exist_ok=True)
 os.makedirs('out', exist_ok=True)
 SR = 24000
@@ -109,9 +109,10 @@ for w in W:
         pieces.append(x)
         t += dur
         if k < len(w['clips']) - 1:
-            gap = np.zeros(int(GAP * SR), np.float32)
+            g = 0.15 if (clip.get('part') and w['clips'][k + 1].get('part')) else GAP
+            gap = np.zeros(int(g * SR), np.float32)
             pieces.append(gap)
-            t += GAP
+            t += g
     # 빠진 문장(없어야 함) 보정
     for i in range(len(cues)):
         if cues[i] is None:
@@ -128,5 +129,11 @@ for w in W:
     result[w['id']] = {'duration': dur_total, 'cues': cues}
     print(w['id'], 'clips', len(w['clips']), 'sent', w['nsent'], 'dur', dur_total, 'size', os.path.getsize(out))
 
-json.dump(result, open('out/cues.json', 'w'), ensure_ascii=False)
+prev = {}
+try:
+    prev = json.load(open('out/cues.json'))
+except Exception:
+    pass
+prev.update(result)
+json.dump(prev, open('out/cues.json', 'w'), ensure_ascii=False)
 print('done')
