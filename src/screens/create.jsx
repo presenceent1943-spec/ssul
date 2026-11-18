@@ -3,11 +3,12 @@ import { CAT, CATEGORIES } from '../data.js';
 import { useStore, useT } from '../store.jsx';
 import { useApp } from '../app-ctx.js';
 import { Badge, Button, Chip, Cover, Icon, SectionHead, Toggle } from '../ui.jsx';
-import { autoTitle, emptyStats, findPII, guessCategory, normTag, paidLengthOk, sentenceSec, splitSentences, subsOk, suggestTags, uid } from '../util.js';
+import { autoTitle, emptyStats, findPII, guessCategory, normTag, paidLengthOk, parseScript, sentenceSec, speakerOf, subsOk, suggestTags, uid } from '../util.js';
 import { fmtDur, fmtKRW, LOCALE } from '../i18n.js';
-import { DEFAULT_VOICE, PRESET, VOICE_GROUPS, VOICE_PRESETS, resolveVoice, speak, stopSpeech } from '../speech.js';
+import { DEFAULT_VOICE, PRESET, VOICE_GROUPS, VOICE_PRESETS, guessPersona, resolveVoice, speak, stopSpeech } from '../speech.js';
 import { CoverPicker } from './creator.jsx';
-import { localTidy, remoteTidy, SPICE, STYLES } from '../tidy.js';
+import { localTidy, remoteTidy, remoteTts, SPICE, STYLES } from '../tidy.js';
+import { b64ToBlob, putBlob } from '../blobstore.js';
 
 const STEPS = ['쓰기', '대본', '목소리', '미리 듣기', '게시'];
 const STATUS = { draft: '초안', script_review: '대본 확인', queued: '생성 대기', generating: '생성 중', review: '검토 대기', published: '게시', failed: '실패' };
@@ -37,6 +38,64 @@ export function VoiceSample({ text, choice, lang = 'ko', size = 'sm' }) {
     <Button size={size} variant={on ? 'primary' : 'secondary'} icon={on ? 'pause' : 'play'} onClick={play} aria-pressed={on}>
       {on ? t('멈추기') : t('들어보기')}
     </Button>
+  );
+}
+
+// 녹음·쓰기 단계에서 바로 고르는 화자 목소리 (연령·성별)
+export function VoiceQuickPick({ value, onChange, sampleText, lang }) {
+  const t = useT();
+  return (
+    <div className="voice-quick">
+      <p className="label">
+        {t('누가 읽어 줄까요?')} <span className="muted small">{t('이야기 분위기에 맞는 연령·성별을 고르세요. 나중에 바꿀 수 있어요.')}</span>
+      </p>
+      <div className="chip-row">
+        {VOICE_PRESETS.map((v) => (
+          <Chip key={v.id} active={value === v.id} onClick={() => onChange(v.id)}>
+            {t(v.name)}
+          </Chip>
+        ))}
+      </div>
+      <div className="row-between">
+        <span className="small muted">{t(PRESET[value]?.desc ?? '')}</span>
+        <VoiceSample text={sampleText} choice={value} lang={lang} />
+      </div>
+    </div>
+  );
+}
+
+// 대화형 대본의 등장인물마다 목소리 배정
+export function CastPicker({ names, cast, onChange, lines, lang, narrator }) {
+  const t = useT();
+  if (!names.length) return null;
+  return (
+    <div className="cast-picker">
+      <p className="label">
+        {t('등장인물 목소리')} <span className="muted small">{t('대본에서 "이름:"으로 시작하는 줄은 그 사람 목소리로 읽어요')}</span>
+      </p>
+      <div className="cast-list">
+        {names.map((name) => {
+          const pid = cast?.[name] ?? guessPersona(name, narrator);
+          return (
+            <div key={name} className="cast-line">
+              <strong className="cast-name">{name}</strong>
+              <select value={pid} onChange={(e) => onChange({ ...(cast ?? {}), [name]: e.target.value })} aria-label={t('{name} 목소리', { name })}>
+                {VOICE_GROUPS.map((g) => (
+                  <optgroup key={g.id} label={t(g.name)}>
+                    {VOICE_PRESETS.filter((v) => v.gender === g.id).map((v) => (
+                      <option key={v.id} value={v.id}>
+                        {t(v.name)} — {t(v.desc)}
+                      </option>
+                    ))}
+                  </optgroup>
+                ))}
+              </select>
+              <VoiceSample text={lines[name] ?? t('안녕하세요, 썰에 오신 걸 환영해요.')} choice={pid} lang={lang} />
+            </div>
+          );
+        })}
+      </div>
+    </div>
   );
 }
 
@@ -76,7 +135,18 @@ export function Create({ draftId, onDone }) {
   );
 
   const script = d.approvedScript ?? d.cleanedText ?? d.rawText;
-  const sentences = useMemo(() => splitSentences(script), [script]);
+  const parsed = useMemo(() => parseScript(script), [script]);
+  const sentences = parsed.sentences;
+  // 등장인물별 첫 대사 (들어보기용)와 확정된 배정
+  const castLines = useMemo(() => {
+    const m = {};
+    for (const raw of script.split('\n')) {
+      const sp = speakerOf(raw);
+      if (sp && !m[sp.name]) m[sp.name] = sp.text;
+    }
+    return m;
+  }, [script]);
+  const castFinal = useMemo(() => Object.fromEntries(parsed.names.map((n) => [n, d.cast?.[n] ?? guessPersona(n, d.aiVoiceName)])), [parsed.names, d.cast, d.aiVoiceName]);
   const sec = useMemo(() => sentences.reduce((a, s) => a + sentenceSec(s, ops.charsPerSec), 0), [sentences, ops.charsPerSec]);
   const guessed = useMemo(() => guessCategory(d.rawText), [d.rawText]);
   const cat = d.category ?? guessed;
@@ -95,15 +165,16 @@ export function Create({ draftId, onDone }) {
     const style = opts.style ?? d.style ?? 'shorts';
     const spice = opts.spice ?? d.spice ?? 'keep';
     const adapt = opts.adapt ?? d.adapt ?? style !== 'plain';
+    const dialogue = opts.dialogue ?? d.dialogue ?? false;
     const url = (ops.tidyUrl || '').trim();
     setTidyNote(null);
     if (!url) {
-      patch({ cleanedText: localTidy(d.rawText), approvedScript: undefined, tidyBy: 'local', style, spice, adapt, status: 'script_review' });
+      patch({ cleanedText: localTidy(d.rawText), approvedScript: undefined, tidyBy: 'local', style, spice, adapt, dialogue, status: 'script_review' });
       return;
     }
     setTidying(true);
     try {
-      const r = await remoteTidy(url, { text: d.rawText, style, spice, adapt, lang: state.prefs.lang });
+      const r = await remoteTidy(url, { text: d.rawText, style, spice, adapt, dialogue, lang: state.prefs.lang, narrator: d.aiVoiceName });
       patch({
         cleanedText: r.script,
         approvedScript: undefined,
@@ -111,6 +182,8 @@ export function Create({ draftId, onDone }) {
         style,
         spice,
         adapt,
+        dialogue,
+        cast: r.cast && typeof r.cast === 'object' ? { ...(d.cast ?? {}), ...Object.fromEntries(Object.entries(r.cast).filter(([, v]) => PRESET[v])) } : d.cast,
         status: 'script_review',
         title: d.title?.trim() ? d.title : r.title || d.title,
         intro: d.intro?.trim() ? d.intro : r.intro || d.intro,
@@ -118,7 +191,7 @@ export function Create({ draftId, onDone }) {
         tags: d.tags.length ? d.tags : (r.tags || []).slice(0, ops.maxTags),
       });
     } catch (e) {
-      patch({ cleanedText: localTidy(d.rawText), approvedScript: undefined, tidyBy: 'local', style, spice, adapt, status: 'script_review' });
+      patch({ cleanedText: localTidy(d.rawText), approvedScript: undefined, tidyBy: 'local', style, spice, adapt, dialogue, status: 'script_review' });
       setTidyNote(t('AI 대본 작가 서버에 연결하지 못해 기본 정리로 대신했어요. ({err})', { err: String(e?.message || e).slice(0, 60) }));
     } finally {
       setTidying(false);
@@ -273,7 +346,7 @@ export function Create({ draftId, onDone }) {
     run(0);
   };
 
-  const generate = (fail) => {
+  const generate = async (fail) => {
     if (left <= 0) {
       toast(t('오늘 생성 한도({n}회)를 다 썼어요. 내일 다시 시도해 주세요.', { n: ops.dailyGenerationLimit }));
       return;
@@ -282,6 +355,25 @@ export function Create({ draftId, onDone }) {
     timers.current.forEach((h) => window.clearTimeout(h));
     timers.current = [];
     setGen('queued');
+    const workId = uid('w');
+    // 음성 생성 서버가 연결돼 있으면 문장마다 화자·등장인물 목소리로 실제 음성 파일을 만든다
+    let audio;
+    const ttsUrl = (ops.ttsUrl || '').trim();
+    if (ttsUrl && d.voice === 'ai' && sentences.length) {
+      setGen('generating');
+      try {
+        const lines = sentences.map((text, i) => {
+          const who = parsed.speakers?.[i];
+          return { text, persona: who ? castFinal[who] : d.aiVoiceName };
+        });
+        const r = await remoteTts(ttsUrl, { lines, lang: LOCALE[state.prefs.lang] ?? 'ko-KR' });
+        const key = `audio-${workId}`;
+        await putBlob(key, b64ToBlob(r.audio, r.mime || 'audio/mpeg'));
+        audio = { url: `idb:${key}`, duration: r.duration, cues: r.cues };
+      } catch (e) {
+        toast(t('음성 생성 서버에 연결하지 못해 기기 음성으로 게시해요. ({err})', { err: String(e?.message || e).slice(0, 60) }));
+      }
+    }
     const h1 = window.setTimeout(() => setGen('generating'), 700);
     const h2 = window.setTimeout(() => {
       if (fail && d.retries < ops.maxRetries) {
@@ -292,7 +384,7 @@ export function Create({ draftId, onDone }) {
       setGen('review');
       const h3 = window.setTimeout(() => {
         const work = {
-          id: uid('w'),
+          id: workId,
           creatorId: 'me',
           title,
           intro: d.intro?.trim() || sentences[0]?.slice(0, 60) || '',
@@ -300,13 +392,16 @@ export function Create({ draftId, onDone }) {
           tags: d.tags,
           origin: d.origin,
           voice: d.voice,
-          aiVoiceName: d.voice === 'ai' ? d.aiVoiceName : undefined,
+          aiVoiceName: d.aiVoiceName,
           sentences,
+          speakers: parsed.speakers,
+          cast: parsed.names.length ? castFinal : undefined,
           paid: d.paid && paidOk,
           priceKRW: d.paid && paidOk ? ops.unitPriceKRW : undefined,
           publishedAt: new Date().toISOString(),
           hue: CAT[cat].hue,
           cover: d.cover,
+          audio,
           lang: state.prefs.lang,
           stats: { week: emptyStats(), month: emptyStats() },
           isDemo: false,
@@ -410,7 +505,10 @@ export function Create({ draftId, onDone }) {
           ) : (
             <SectionHead title={t('이야기를 적어 주세요')} sub={t('실제 경험담, 창작 이야기, 짧은 생각, 위로의 말 어떤 것도 좋아요.')} />
           )}
-          <textarea id="raw-text" className="big-textarea" value={d.rawText} onChange={(e) => patch({ rawText: e.target.value, cleanedText: undefined, approvedScript: undefined })} placeholder={t('예) 월요일 아침, 부장님이 커피 심부름을 시키셨어요…')} rows={mode === 'record' ? 7 : 11} />
+          <VoiceQuickPick value={d.aiVoiceName ?? DEFAULT_VOICE} onChange={(id) => patch({ voice: 'ai', aiVoiceName: id })} sampleText={sentences[0] ?? t('안녕하세요. 오늘은 어떤 이야기를 들려 드릴까요?')} lang={state.prefs.lang} />
+          <Toggle id="dialogue" label={t('등장인물 대화로 만들기 (상대방 말은 다른 목소리로)')} checked={!!d.dialogue} onChange={(v) => patch({ dialogue: v })} />
+          {d.dialogue && <p className="muted small">{t('AI 작가가 다른 사람의 말을 "이름: 대사" 줄로 나눠 써요. 직접 쓸 때도 줄 앞에 "부장님:"처럼 이름을 붙이면 그 사람 목소리로 읽어요.')}</p>}
+          <textarea id="raw-text" className="big-textarea" value={d.rawText} onChange={(e) => patch({ rawText: e.target.value, cleanedText: undefined, approvedScript: undefined })} placeholder={d.dialogue ? t('예) 부장님이 커피 심부름을 시켰어요.\n부장님: 내 건 알아서.\n알아서가 뭐예요, 알아서가.') : t('예) 월요일 아침, 부장님이 커피 심부름을 시키셨어요…')} rows={mode === 'record' ? 7 : 11} />
           <div className="row-between small muted">
             <span>
               {t('{n}자', { n: d.rawText.length })} · {t('예상 {dur}', { dur: fmtDur(sentenceSec(d.rawText, ops.charsPerSec), t) })}
@@ -469,6 +567,7 @@ export function Create({ draftId, onDone }) {
             ))}
           </div>
           <p className="muted small">{t(STYLES.find((st) => st.id === (d.style ?? 'shorts'))?.desc ?? '')}</p>
+          <Toggle id="dialogue2" label={t('등장인물 대화로 만들기 (상대방 말은 다른 목소리로)')} checked={!!d.dialogue} onChange={(v) => runTidy({ dialogue: v })} />
           <details className="section">
             <summary>
               <span>{t('욕·거친 표현')}</span>
@@ -509,8 +608,10 @@ export function Create({ draftId, onDone }) {
               </div>
             </details>
           </div>
+          <CastPicker names={parsed.names} cast={castFinal} onChange={(c) => patch({ cast: c })} lines={castLines} lang={state.prefs.lang} narrator={d.aiVoiceName} />
           <p className="muted small">
             {t('자막 {n}문장', { n: sentences.length })} · {t('예상 길이 {dur}', { dur: fmtDur(sec, t) })}
+            {parsed.names.length > 0 && <> · {t('등장인물 {n}명', { n: parsed.names.length })}</>}
           </p>
           <div className="btn-row">
             <Button onClick={prev} disabled={tidying}>
@@ -564,6 +665,7 @@ export function Create({ draftId, onDone }) {
               </div>
             </div>
           ))}
+          <CastPicker names={parsed.names} cast={castFinal} onChange={(c) => patch({ cast: c })} lines={castLines} lang={state.prefs.lang} narrator={d.aiVoiceName} />
           <p className="muted small">{t('기기에 남성(또는 여성) 음성이 없으면 높낮이로 흉내 내요. 설정 › 목소리에서 성별별 기본 음성을 직접 고를 수 있어요.')}</p>
           <p className="muted small">{t('자기 목소리 복제, 유명인·타인 목소리 모방은 제공하지 않아요. 듣는 사람은 설정에서 자기가 좋아하는 목소리로 바꿔 들을 수도 있어요.')}</p>
           <div className="btn-row">

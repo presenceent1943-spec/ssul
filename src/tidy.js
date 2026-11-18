@@ -105,3 +105,18 @@ export async function remoteTidy(url, payload, { timeoutMs = 40000 } = {}) {
     clearTimeout(h);
   }
 }
+
+// 음성 생성 서버(worker/tts-worker.js): 문장마다 페르소나 목소리로 읽어 한 파일로 돌려준다
+export async function remoteTts(url, payload, { timeoutMs = 120000 } = {}) {
+  const ctl = new AbortController();
+  const h = setTimeout(() => ctl.abort(), timeoutMs);
+  try {
+    const r = await fetch(url, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(payload), signal: ctl.signal });
+    if (!r.ok) throw new Error(`HTTP ${r.status}`);
+    const j = await r.json();
+    if (!j || typeof j.audio !== 'string' || !Array.isArray(j.cues)) throw new Error('empty');
+    return j;
+  } finally {
+    clearTimeout(h);
+  }
+}

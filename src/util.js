@@ -1,4 +1,44 @@
 // 문장 분리·길이 추정·텍스트 정리 등 순수 유틸
+// 대화형 대본: 줄 앞에 "이름:" 을 붙이면 그 사람이 말하는 줄. 없는 줄은 화자(나·해설).
+const SPEAKER_RE = /^([가-힣A-Za-z][가-힣A-Za-z0-9·]{0,9})\s*[:：]\s*(.+)$/;
+export function speakerOf(line) {
+  const m = line.trim().match(SPEAKER_RE);
+  if (!m || /^https?$/i.test(m[1])) return null;
+  return { name: m[1], text: m[2] };
+}
+
+// 대본 → 문장 목록 + 문장별 화자(null = 화자 본인) + 등장인물 이름 목록(names)
+export function parseScript(text) {
+  const sentences = [];
+  const speakers = [];
+  const cast = [];
+  for (const raw of String(text ?? '').split('\n')) {
+    const sp = speakerOf(raw);
+    const body = sp ? sp.text : raw;
+    const who = sp ? sp.name : null;
+    if (who && !cast.includes(who)) cast.push(who);
+    for (const s of splitSentences(body)) {
+      sentences.push(s);
+      speakers.push(who);
+    }
+  }
+  return { sentences, speakers: cast.length ? speakers : undefined, names: cast };
+}
+
+// 문장 목록을 다시 대본 텍스트로 (화자 표시 포함)
+export function joinScript(sentences, speakers) {
+  let out = '';
+  let prev = undefined;
+  sentences.forEach((s, i) => {
+    const who = speakers?.[i] ?? null;
+    if (i === 0) out += who ? `${who}: ${s}` : s;
+    else if (who !== prev) out += `\n${who ? `${who}: ` : ''}${s}`;
+    else out += ` ${s}`;
+    prev = who;
+  });
+  return out;
+}
+
 export function splitSentences(text) {
   const out = [];
   const re = /[^.!?…\n]+[.!?…]*["”’)]*/g;

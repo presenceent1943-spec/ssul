@@ -1,5 +1,5 @@
 // 썰 — AI 대본 정리 서버 (Cloudflare Worker)
-// 앱이 POST { text, style, spice, adapt, lang } 를 보내면 Claude가 흐름·의도를 읽어 숏츠·드라마 대본으로 다시 쓰고
+// 앱이 POST { text, style, spice, adapt, dialogue, narrator, lang } 를 보내면 Claude가 흐름·의도를 읽어 숏츠·드라마 대본으로 다시 쓰고
 // { script, title, intro, category, tags } 를 돌려준다. API 키는 Worker의 비밀 변수(ANTHROPIC_API_KEY)에만 둔다.
 //
 // 배포: Cloudflare 대시보드 → Workers & Pages → Create → "Hello World" Worker → Edit code → 이 파일 내용 붙여넣기 → Deploy
@@ -7,6 +7,7 @@
 //       (선택) MODEL = claude-sonnet-5-5   ALLOWED_ORIGIN = https://presenceent1943-spec.github.io
 
 const CATEGORIES = ['comic', 'horror', 'love', 'daily', 'warm', 'motivation', 'life', 'music', 'drama'];
+const PERSONAS = ['w20', 'w30', 'w50', 'w70', 'kid', 'whisper', 'm20', 'm30', 'm50', 'm70'];
 
 const SYSTEM = `당신은 오디오 숏츠 플랫폼 '썰'의 전속 대본 작가입니다. 사용자가 말로 막 뱉은 이야기(받아쓰기, 메모, 거친 초고)를 받아, 드라마·영화 숏츠처럼 첫 문장에서 사람을 붙잡고 끝까지 듣게 만드는 "귀로 듣는 대본"으로 다시 씁니다. 받아 적는 사람이 아니라 작가입니다. 말의 흐름과 의도를 먼저 파악하고, 어디가 웃음·공포·울컥 포인트인지 찾아 그 지점이 터지도록 구성합니다.
 
@@ -24,6 +25,14 @@ style에 따라
 - 길이: shorts는 원문의 80~150%, radio는 90~130%, plain은 70~110% 안에서. 원문이 아주 짧으면 억지로 늘리지 않습니다.
 - lang이 ko가 아니면 그 언어로 씁니다. 원문이 다른 언어로 쓰여 있으면 번역해서 씁니다.
 
+대화형 대본 (dialogue가 yes일 때)
+- 화자(이야기를 들려주는 '나')가 아닌 다른 사람이 말하는 대사는 그 줄 맨 앞에 "이름: " 을 붙여 한 줄로 따로 씁니다. 예) 부장님: 내 건 알아서. / 엄마: 밥은 먹었냐.
+- 이름은 원문에 나온 호칭을 그대로(부장님, 엄마, 할머니, 그분, 친구 …), 2~6자, 띄어쓰기 없이. 같은 사람은 끝까지 같은 이름으로.
+- '나'의 말과 설명은 이름 없이 씁니다. 따옴표는 쓰지 않습니다(이름 뒤 대사는 따옴표 없이).
+- 한 줄에는 한 사람의 말만. 설명 문장과 남의 대사를 한 줄에 섞지 않습니다.
+- 출력 JSON의 cast에 등장인물마다 어울리는 목소리 id를 고릅니다. 가능한 id: w20(20대 여성) w30(30대 여성) w50(50대 여성) w70(70대 여성) kid(아이) whisper(속삭임) m20(20대 남성) m30(30대 남성) m50(50대 남성) m70(70대 남성). narrator 값은 화자의 목소리이니 등장인물은 그와 구분되게 고릅니다.
+- dialogue가 no면 "이름:" 줄을 쓰지 않고 cast는 빈 객체로 둡니다.
+
 욕·거친 표현 처리 (spice 값에 따라)
 - keep: 그 거친 말맛과 감정의 세기를 살리고, 오히려 더 자극적이고 확 끌리게 다듬습니다. 방송에서 그대로 쓰기 어려운 노골적 비속어는 같은 강도와 분위기를 주는 다른 표현으로 바꿉니다(예: "아 진짜 돌아버리겠네", "속이 뒤집혔어요", "환장하겠더라고요"). 혐오·차별 표현은 강도만 남기고 대상 비하는 뺍니다.
 - soft: 뜻과 감정은 그대로 두고 표현만 부드럽게 바꿉니다.
@@ -32,7 +41,7 @@ style에 따라
 제목은 구미가 당기게: 결말을 살짝 보여 주거나 궁금증을 남기는 한 문장, 28자 이내. (예: 부장님이 "알아서"라고 했다. 나는 제일 비싼 걸 샀다 / 수능 전날, 알람 다섯 개를 전부 오후로 맞췄다 / 밥솥은 샀는데 쌀을 안 샀다)
 
 출력은 JSON 하나만. 다른 말은 쓰지 않습니다.
-{"script": "대본(줄바꿈은 \\n, 문단 사이는 빈 줄)", "title": "28자 이내 제목", "intro": "한 줄 소개 50자 이내", "category": "comic|horror|love|daily|warm|motivation|life|music|drama 중 하나", "tags": ["해시태그 3개 이내, # 없이"]}`;
+{"script": "대본(줄바꿈은 \\n, 문단 사이는 빈 줄)", "title": "28자 이내 제목", "intro": "한 줄 소개 50자 이내", "category": "comic|horror|love|daily|warm|motivation|life|music|drama 중 하나", "tags": ["해시태그 3개 이내, # 없이"], "cast": {"등장인물 이름": "목소리 id"}}`;
 
 function cors(origin, env) {
   const allow = env.ALLOWED_ORIGIN || '*';
@@ -69,9 +78,11 @@ export default {
     const spice = ['keep', 'soft', 'drop'].includes(body.spice) ? body.spice : 'keep';
     const style = ['shorts', 'radio', 'plain'].includes(body.style) ? body.style : 'shorts';
     const adapt = body.adapt == null ? style !== 'plain' : !!body.adapt;
+    const dialogue = !!body.dialogue;
     const lang = String(body.lang || 'ko');
+    const narrator = String(body.narrator || 'w30').slice(0, 12);
 
-    const user = `style: ${style}\nspice: ${spice}\nadapt(살 붙이기 허용): ${adapt ? 'yes' : 'no'}\nlang: ${lang}\n\n[원문]\n${text}`;
+    const user = `style: ${style}\nspice: ${spice}\nadapt(살 붙이기 허용): ${adapt ? 'yes' : 'no'}\ndialogue(대화형): ${dialogue ? 'yes' : 'no'}\nnarrator(화자 목소리): ${narrator}\nlang: ${lang}\n\n[원문]\n${text}`;
     const model = env.MODEL || 'claude-sonnet-5-5';
 
     const r = await fetch('https://api.anthropic.com/v1/messages', {
@@ -111,8 +122,10 @@ export default {
         intro: String(out.intro || '').slice(0, 80),
         category: CATEGORIES.includes(out.category) ? out.category : undefined,
         tags: Array.isArray(out.tags) ? out.tags.map((t) => String(t).replace(/^#/, '').trim()).filter(Boolean).slice(0, 3) : [],
+        cast: out.cast && typeof out.cast === 'object' ? Object.fromEntries(Object.entries(out.cast).filter(([k, v]) => PERSONAS.includes(v)).map(([k, v]) => [String(k).replace(/\s+/g, '').slice(0, 10), v])) : {},
         model,
         style,
+        dialogue,
         spice,
         adapt,
       },

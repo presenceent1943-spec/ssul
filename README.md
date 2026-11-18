@@ -37,9 +37,27 @@ npx cap open ios       # Xcode (Mac 전용)
 4. Worker 주소(`https://ssul-tidy.xxxx.workers.dev`)를 앱 운영 설정에 입력 (기본값으로 넣으려면 `src/store.jsx` 의 `tidyUrl`)
 서버 주소가 비어 있으면 기본 정리(문장 끊기·군더더기 제거)만 합니다.
 
+## 음성 생성 서버 (Cloudflare Worker, 사람 목소리)
+`worker/tts-worker.js` 를 Worker로 올리고 **관리자 화면 → 운영 설정 → 음성 생성 서버 주소**에 넣으면, 게시할 때 문장마다
+화자(20·30·50·70대 여성/남성, 아이, 속삭임)와 등장인물별 신경망 음성으로 실제 음성 파일을 만들어 기기에 저장합니다.
+1. Azure Portal → "Speech" 리소스 생성(지역 koreacentral, F0 무료 등급) → Keys and Endpoint 에서 키 복사
+2. Cloudflare Workers → Create → 이름 `ssul-tts` → 코드를 `worker/tts-worker.js` 로 교체 → Deploy
+3. Settings → Variables and Secrets → `AZURE_SPEECH_KEY`(Secret), `AZURE_REGION`=koreacentral
+4. Worker 주소를 앱 운영 설정에 입력 (기본값으로 넣으려면 `src/store.jsx` 의 `ttsUrl`)
+샘플 20편은 Higgsfield Seed Audio로 미리 만든 음성 파일(`site/audio/`)을 재생합니다. (`scripts/tts-manifest.mjs` → `scripts/tts/assemble.py`)
+
+## 대화형 대본 (등장인물별 목소리)
+대본에서 줄 앞에 `이름:` 을 붙이면 그 줄은 그 사람 목소리로 읽습니다. 이름 없는 줄은 화자(나).
+```
+월요일 아침, 부장님이 카드를 내밀었어요.
+부장님: 아메리카노 다섯, 라떼 둘. 내 건 알아서.
+알아서가 뭐예요, 알아서가.
+```
+만들기 → 대본 단계에서 등장인물마다 목소리를 고르고(들어보기), AI 작가에 "등장인물 대화로 만들기"를 켜면 상대방 말을 자동으로 나눠 씁니다.
+
 ## 현재 단계 (1단계 시제품)
 - 모든 작품·창작자·수치는 시연용 샘플, 데이터는 기기(브라우저)에만 저장
-- 음성은 기기 내장 TTS, 결제는 데모 — 스토어 심사 전에 로그인·서버 음성·인앱결제 연결 필요(2~3단계)
+- 샘플은 생성된 사람 목소리 파일, 새 작품은 음성 생성 서버 연결 전까지 기기 내장 TTS. 결제는 데모 — 스토어 심사 전에 로그인·인앱결제 연결 필요(2~3단계)
 
 ## 비밀 값
 API 키·비밀번호는 코드에 넣지 않습니다.

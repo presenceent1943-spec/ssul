@@ -86,6 +86,7 @@ export function FullPlayer() {
           <div className="stage stage-video">
             <CoverFill work={work} />
             <p className="stage-caption-big" aria-live="polite">
+              {work.speakers?.[sentenceIdx] && <span className="caption-who">{work.speakers[sentenceIdx]}</span>}
               {work.sentences[sentenceIdx]}
             </p>
             <p className="stage-caption-next">{work.sentences[sentenceIdx + 1] ?? ''}</p>
@@ -99,6 +100,7 @@ export function FullPlayer() {
                 if (Math.abs(i - sentenceIdx) > 2) return null;
                 return (
                   <p key={i} className={`caption ${i === sentenceIdx ? 'caption-on' : ''} ${locked ? 'caption-locked' : ''}`}>
+                    {!locked && work.speakers?.[i] && <span className="caption-who">{work.speakers[i]}</span>}
                     {locked ? `🔒 ${t('구매 후 들을 수 있어요')}` : s}
                   </p>
                 );
@@ -124,7 +126,14 @@ export function FullPlayer() {
             <SubscribeButton creatorId={work.creatorId} size="sm" />
           </div>
           <p className="muted small">
-            {t(CAT[work.category].name)} · {work.voice === 'ai' ? t('AI 음성') : t('본인 목소리')} · {voiceOk ? t('{name} 목소리로 재생 중(기기 음성)', { name: voiceName }) : state.prefs.voiceOn ? t('이 기기에 한국어 음성이 없어 자막만 재생돼요') : t('음성 꺼짐 · 자막만 재생')}
+            {t(CAT[work.category].name)} · {work.voice === 'ai' ? t('AI 음성') : t('본인 목소리')} ·{' '}
+            {player.hasAudio
+              ? t('{name} 목소리 · 완성된 음성 파일', { name: t(PRESET[work.aiVoiceName]?.name ?? PRESET[DEFAULT_VOICE].name) })
+              : voiceOk
+                ? t('{name} 목소리로 재생 중(기기 음성)', { name: voiceName })
+                : state.prefs.voiceOn
+                  ? t('이 기기에 한국어 음성이 없어 자막만 재생돼요')
+                  : t('음성 꺼짐 · 자막만 재생')}
           </p>
         </div>
         <div className="scrub">
@@ -307,6 +316,7 @@ export function FullPlayer() {
         </Sheet>
 
         <Sheet open={voiceOpen} onClose={() => setVoiceOpen(false)} title={t('목소리 바꾸기')} tall>
+          {player.hasAudio && <p className="note">{t('이 작품은 작가가 고른 목소리로 완성된 음성 파일이라 목소리를 바꿀 수 없어요. 아래 설정은 기기 음성으로 재생되는 작품에 적용돼요.')}</p>}
           <VoicePicker />
         </Sheet>
       </div>

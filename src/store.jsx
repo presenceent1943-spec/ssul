@@ -15,6 +15,7 @@ export const DEFAULT_OPS = {
   dailyGenerationLimit: 5,
   maxRetries: 3,
   tidyUrl: '',
+  ttsUrl: '', // 음성 생성 서버(worker/tts-worker.js) 주소. 비우면 기기 내장 TTS
 };
 
 export const DEFAULT_PREFS = {

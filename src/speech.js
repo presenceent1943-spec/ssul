@@ -37,6 +37,28 @@ export const DEFAULT_VOICE = 'w30';
 const byId = Object.fromEntries(VOICE_PRESETS.map((p) => [p.id, p]));
 export const PRESET = { ...byId, ...Object.fromEntries(Object.entries(ALIAS).map(([k, v]) => [k, byId[v]])) };
 
+// 등장인물 이름으로 목소리 추정 (엄마→50대 여성, 할아버지→70대 남성, 아이→아이 …). 모르면 화자와 반대 성별의 30대.
+const GUESS = [
+  [/할머니|외할머니|할매|노파/, 'w70'],
+  [/할아버지|외할아버지|할배|노인|영감/, 'm70'],
+  [/엄마|어머니|어머님|아줌마|아주머니|이모|고모|사모님|여사|장모/, 'w50'],
+  [/아빠|아버지|아버님|아저씨|삼촌|부장|팀장|사장|과장|차장|교수|선생|장인|기사|경비|대표|회장|이사|감독/, 'm50'],
+  [/아이|꼬마|아들|딸|조카|소년|소녀|학생|애|초등|유치원/, 'kid'],
+  [/누나|언니|여자|그녀|소녀|여친|여사친|처제|아내|와이프|며느리|이모님|간호사|여학생/, 'w20'],
+  [/형|오빠|남자|그놈|남친|남사친|매형|남편|사위|군인|남학생/, 'm20'],
+  [/친구|동기|동료|후배|선배|직원|알바|점장|사수/, null],
+];
+export function guessPersona(name, narrator = DEFAULT_VOICE) {
+  for (const [re, id] of GUESS) {
+    if (re.test(name)) {
+      if (id) return id;
+      break;
+    }
+  }
+  const n = PRESET[narrator] ?? byId[DEFAULT_VOICE];
+  return n.gender === 'm' ? 'w30' : 'm30';
+}
+
 // 기기 음성 이름으로 성별 추정 (iOS·맥: Yuna·Sora / 윈도우: Heami·SunHi·InJoon·Hyunsu / 안드로이드 구글: ism·kob·koc(여) kod(남))
 const FEMALE = /yuna|sora|suhyun|jian|heami|sunhi|jimin|seohyeon|soonbok|yujin|seoyeon|jiyoung|nara|hyeri|female|여성|여자|x-ism|x-kob|x-koc/i;
 const MALE = /injoon|hyunsu|minsang|minsu|bongjin|gookmin|youngjin|kyungsoo|\bmale|남성|남자|x-kod/i;

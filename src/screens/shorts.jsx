@@ -66,6 +66,7 @@ export function Shorts({ startId }) {
               <div className="short-lines">
                 {w.sentences.map((s, j) => (
                   <p key={j} className={`short-line ${j === line ? 'short-line-on' : ''} ${isCur && j < line ? 'short-line-done' : ''}`}>
+                    {w.speakers?.[j] && <span className="caption-who">{w.speakers[j]}</span>}
                     {s}
                   </p>
                 ))}

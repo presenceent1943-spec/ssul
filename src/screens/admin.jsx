@@ -131,6 +131,11 @@ export function Admin() {
             <input id="ops-tidyUrl" type="url" value={ops.tidyUrl ?? ''} placeholder="https://ssul-tidy.xxxx.workers.dev" onChange={(e) => setOps({ tidyUrl: e.target.value.trim() })} />
           </label>
           <p className="small muted">{t('비워 두면 기본 정리(문장 끊기·군더더기 제거)만 해요. Cloudflare Worker 주소를 넣으면 AI 작가가 막 말한 이야기를 숏츠·드라마 대본처럼 다시 써요. (worker/tidy-worker.js)')}</p>
+          <label className="field">
+            <span>{t('음성 생성 서버 주소')}</span>
+            <input id="ops-ttsUrl" type="url" value={ops.ttsUrl ?? ''} placeholder="https://ssul-tts.xxxx.workers.dev" onChange={(e) => setOps({ ttsUrl: e.target.value.trim() })} />
+          </label>
+          <p className="small muted">{t('비워 두면 기기 내장 음성(TTS)으로 재생돼요. 주소를 넣으면 게시할 때 연령·성별·등장인물별 신경망 음성으로 실제 음성 파일을 만들어요. (worker/tts-worker.js)')}</p>
           <div className="card card-soft small">
             <strong>{t('순위 가중치(초기 제안)')}</strong>
             <p>

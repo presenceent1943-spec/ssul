@@ -123,3 +123,20 @@
 .voice-group { display: flex; flex-direction: column; gap: 6px; }
 .voice-group .label { margin-bottom: 0; }
 .field select { width: 100%; font: inherit; padding: 10px 12px; border-radius: 10px; border: 1px solid var(--line); background: var(--surface); color: var(--fg); }
+
+/* 대화형 대본: 화자 이름 */
+.caption-who { display: inline-block; font-size: 0.72em; font-weight: 700; color: var(--accent); background: var(--accent-soft); border-radius: 999px; padding: 1px 8px; margin-right: 6px; vertical-align: 2px; letter-spacing: 0.01em; }
+.stage-caption-big .caption-who { display: block; width: max-content; margin: 0 auto 6px; font-size: 0.55em; }
+.short-line .caption-who { font-size: 0.78em; }
+.cast-row { display: flex; flex-wrap: wrap; gap: 6px; }
+.cast-item { font-size: 0.78rem; color: var(--muted); background: var(--surface-2); border-radius: 999px; padding: 4px 10px; }
+.cast-item strong { color: var(--fg); margin-right: 4px; }
+
+/* 만들기: 빠른 목소리 선택·등장인물 배정 */
+.voice-quick { display: flex; flex-direction: column; gap: 8px; }
+.voice-quick .chip-row { margin: 0 calc(-1 * var(--gutter-r)) 0 calc(-1 * var(--gutter-l)); padding: 0 var(--gutter-r) 0 var(--gutter-l); }
+.cast-picker { display: flex; flex-direction: column; gap: 8px; }
+.cast-list { display: flex; flex-direction: column; gap: 8px; }
+.cast-line { display: grid; grid-template-columns: minmax(56px, auto) 1fr auto; align-items: center; gap: 8px; }
+.cast-line select { min-width: 0; width: 100%; font: inherit; font-size: 0.9rem; padding: 8px 10px; border-radius: 10px; border: 1px solid var(--line); background: var(--surface); color: var(--fg); }
+.cast-name { font-size: 0.92rem; }

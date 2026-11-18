@@ -3,7 +3,8 @@ import { CAT, SERIE, SERIES } from '../data.js';
 import { displayName, subscriberCount, useStore, useT } from '../store.jsx';
 import { useApp } from '../app-ctx.js';
 import { Avatar, BackBar, Badge, Button, Chip, Cover, Empty, Icon, Meta, MoreText, ORIGIN_LABEL, SectionHead, SubscribeButton, WorkList } from '../ui.jsx';
-import { canAccess, previewCutoff, previewSentenceCount, totalSec } from '../util.js';
+import { canAccess, joinScript, previewCutoff, previewSentenceCount, totalSec } from '../util.js';
+import { PRESET } from '../speech.js';
 import { fmtCount, fmtDur, fmtKRW, relTime } from '../i18n.js';
 
 export function WorkDetail({ id }) {
@@ -68,6 +69,18 @@ export function WorkDetail({ id }) {
         </div>
       </div>
       <p className="detail-intro">{w.intro}</p>
+      {w.cast && Object.keys(w.cast).length > 0 && (
+        <div className="cast-row" aria-label={t('등장인물 목소리')}>
+          <span className="cast-item">
+            <strong>{t('화자')}</strong> {t(PRESET[w.aiVoiceName]?.name ?? '')}
+          </span>
+          {Object.entries(w.cast).map(([name, pid]) => (
+            <span key={name} className="cast-item">
+              <strong>{name}</strong> {t(PRESET[pid]?.name ?? '')}
+            </span>
+          ))}
+        </div>
+      )}
       <div className="card card-soft snippet-card">
         <p className="label">{t('어떤 이야기인지 살짝')}</p>
         <MoreText text={w.sentences.slice(0, previewN).join(' ') + (w.sentences.length > previewN ? ' …' : '')} lines={3} className="script-snippet" />
@@ -113,7 +126,7 @@ export function WorkDetail({ id }) {
       {showScript && (
         <div className="card">
           {access ? (
-            <MoreText text={w.sentences.join(' ')} lines={6} className="script-text" />
+            <MoreText text={joinScript(w.sentences, w.speakers)} lines={6} className="script-text" />
           ) : (
             <>
               <p className="script-text">{w.sentences.slice(0, previewN).join(' ')} …</p>
